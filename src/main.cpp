@@ -6,8 +6,7 @@
  * - Sensors: MPU6050 6-axis IMU over I2C (GPIO8 SDA, GPIO9 SCL)
  * - Inputs: 2 Momentary Push Buttons (GPIO5 Btn A, GPIO6 Btn B)
  * - Connectivity: BLE HID Mouse (NimBLE-Arduino)
- * - Peripheral: Low-Power Laser Module Driver (GPIO7)
- * - State Management: Deterministic 7-state FSM with safety interlocks
+ * - State Management: Deterministic FSM with safe state transitions
  * - Diagnostics: Hardware USB CDC Serial telemetry and commands
  */
 
@@ -19,39 +18,30 @@
 #include "input/button_manager.h"
 #include "motion/motion_processor.h"
 #include "connectivity/ble_mouse.h"
-#include "peripherals/laser_controller.h"
 #include "system/state_manager.h"
 #include "system/diagnostics.h"
 
 // =============================================================================
 // Static Component Instances
 // =============================================================================
-static Sensors::IMUDriver           s_imuDriver;
-static Sensors::IMUCalibration       s_imuCalibration;
-static Input::ButtonManager         s_buttonManager;
-static Motion::MotionProcessor       s_motionProcessor;
-static Connectivity::BLEMouse       s_bleMouse;
-static Peripherals::LaserController s_laserController;
-static System::StateManager         s_stateManager;
-static System::Diagnostics          s_diagnostics;
+static Sensors::IMUDriver     s_imuDriver;
+static Sensors::IMUCalibration s_imuCalibration;
+static Input::ButtonManager   s_buttonManager;
+static Motion::MotionProcessor s_motionProcessor;
+static Connectivity::BLEMouse s_bleMouse;
+static System::StateManager   s_stateManager;
+static System::Diagnostics    s_diagnostics;
 
 // Timing variables (safe across millis() rollover)
-static uint32_t s_lastIMUSampleMs   = 0;
-static uint32_t s_lastMotionCalcMs  = 0;
-static uint32_t s_sensorErrorCount  = 0;
+static uint32_t s_lastIMUSampleMs  = 0;
+static uint32_t s_lastMotionCalcMs = 0;
+static uint32_t s_sensorErrorCount = 0;
 
 // =============================================================================
 // State Machine and Connection Callbacks
 // =============================================================================
 static void handleStateChange(System::SystemState oldState, System::SystemState newState) {
     s_diagnostics.printStateTransition(oldState, newState);
-
-    // Safety interlock enforcement on state transitions
-    if (!s_stateManager.isLaserPermitted()) {
-        s_laserController.setInterlock(true);
-    } else {
-        s_laserController.setInterlock(false);
-    }
 
     if (newState == System::SystemState::AIR_MOUSE_PAUSED) {
         s_motionProcessor.setPaused(true);
@@ -74,7 +64,6 @@ static void handleBLEConnection(bool connected) {
             s_stateManager.transitionTo(System::SystemState::AIR_MOUSE_ACTIVE);
         }
     } else {
-        s_laserController.emergencyShutdown();
         s_stateManager.transitionTo(System::SystemState::BLE_DISCONNECTED);
     }
 }
@@ -83,11 +72,8 @@ static void handleBLEConnection(bool connected) {
 // Calibration Routine Helper
 // =============================================================================
 static void performRecalibration() {
-    System::SystemState previousState = s_stateManager.getState();
     s_stateManager.transitionTo(System::SystemState::CALIBRATING);
 
-    // Laser must be unconditionally OFF during calibration
-    s_laserController.emergencyShutdown();
     s_motionProcessor.reset();
     s_bleMouse.releaseAll();
 
@@ -101,7 +87,6 @@ static void performRecalibration() {
             s_stateManager.transitionTo(System::SystemState::BLE_DISCONNECTED);
         }
     } else {
-        // Retain prior state or fall back to safe ready/disconnected
         if (s_bleMouse.isConnected()) {
             s_stateManager.transitionTo(System::SystemState::AIR_MOUSE_ACTIVE);
         } else {
@@ -114,21 +99,18 @@ static void performRecalibration() {
 // Setup
 // =============================================================================
 void setup() {
-    // 1. Hardware-level safety default: immediately lock laser OFF before anything else
-    s_laserController.init(Config::Pins::LASER_DRIVER);
-
-    // 2. Initialize USB CDC serial diagnostics
+    // 1. Initialize USB CDC serial diagnostics
     s_diagnostics.init(Config::Settings::SERIAL_BAUD_RATE);
     s_diagnostics.printStartupBanner();
 
-    // 3. Initialize state manager and attach transition observer
+    // 2. Initialize state manager and attach transition observer
     s_stateManager.init();
     s_stateManager.setStateChangeCallback(handleStateChange);
 
-    // 4. Initialize physical push buttons
+    // 3. Initialize physical push buttons
     s_buttonManager.init(Config::Pins::BUTTON_A, Config::Pins::BUTTON_B);
 
-    // 5. Initialize I2C Bus and MPU6050 Motion Sensor
+    // 4. Initialize I2C Bus and MPU6050 Motion Sensor
     Serial.println("[INIT] Initializing I2C bus and MPU6050...");
     if (!s_imuDriver.init(Config::Pins::I2C_SDA, Config::Pins::I2C_SCL, Config::Settings::I2C_CLOCK_SPEED_HZ)) {
         s_sensorErrorCount++;
@@ -137,14 +119,14 @@ void setup() {
     } else {
         s_diagnostics.printI2CScanResult(s_imuDriver.getDetectedAddress(), s_imuDriver.getWhoAmI());
 
-        // 6. Perform startup stationary calibration
+        // 5. Perform startup stationary calibration
         s_stateManager.transitionTo(System::SystemState::CALIBRATING);
         s_imuCalibration.runBlocking(s_imuDriver, Config::Settings::CALIBRATION_DURATION_MS);
         s_diagnostics.printCalibrationResult(s_imuCalibration.getResult());
         s_stateManager.transitionTo(System::SystemState::READY);
     }
 
-    // 7. Initialize BLE HID Mouse subsystem
+    // 6. Initialize BLE HID Mouse subsystem
     Serial.println("[INIT] Initializing BLE HID Stack (NimBLE)...");
     s_bleMouse.setConnectionChangeCallback(handleBLEConnection);
     s_bleMouse.begin(Config::Settings::BLE_DEVICE_NAME, Config::Settings::BLE_MANUFACTURER);
@@ -174,13 +156,7 @@ void loop() {
     }
 
     // -------------------------------------------------------------------------
-    // 2. Safety Audit: Laser Controller Update (Enforces 5s hard timeout)
-    // -------------------------------------------------------------------------
-    // Runs on EVERY cycle regardless of sensor or BLE connection status.
-    s_laserController.update();
-
-    // -------------------------------------------------------------------------
-    // 3. User Input & Button Event Processing
+    // 2. User Input & Button Event Processing
     // -------------------------------------------------------------------------
     Input::ButtonEvent event = s_buttonManager.update();
     if (event != Input::ButtonEvent::NONE) {
@@ -195,7 +171,7 @@ void loop() {
                 break;
 
             case Input::ButtonEvent::BUTTON_B_SHORT_PRESS:
-                // Right Click
+                // Right Click (instant on release)
                 if (s_bleMouse.isConnected()) {
                     s_bleMouse.click(Connectivity::MOUSE_RIGHT);
                 }
@@ -217,21 +193,8 @@ void loop() {
                 performRecalibration();
                 break;
 
-            case Input::ButtonEvent::LASER_HOLD_ENGAGE:
-                // Deliberate hold gesture: engage laser
-                s_laserController.requestLaser(true);
-                s_diagnostics.printLaserEvent(s_laserController.getState(), s_laserController.getActiveDurationMs());
-                break;
-
-            case Input::ButtonEvent::LASER_HOLD_RELEASE:
-                // Gesture released: immediately disengage laser
-                s_laserController.requestLaser(false);
-                s_diagnostics.printLaserEvent(s_laserController.getState(), s_laserController.getActiveDurationMs());
-                break;
-
             case Input::ButtonEvent::SIMULTANEOUS_PRESS:
                 // Chorded press: reserved for V2 Mode Switching
-                // Suppressed from causing laser activation or clicks in V1
                 break;
 
             default:
@@ -240,7 +203,7 @@ void loop() {
     }
 
     // -------------------------------------------------------------------------
-    // 4. IMU Sensor Acquisition & Motion Pipeline (100 Hz Loop)
+    // 3. IMU Sensor Acquisition & Motion Pipeline (100 Hz Loop)
     // -------------------------------------------------------------------------
     if ((now - s_lastIMUSampleMs) >= Config::Settings::IMU_SAMPLE_INTERVAL_MS) {
         s_lastIMUSampleMs = now;
@@ -283,7 +246,7 @@ void loop() {
     }
 
     // -------------------------------------------------------------------------
-    // 5. Sensor Error Auto-Recovery Attempt
+    // 4. Sensor Error Auto-Recovery Attempt
     // -------------------------------------------------------------------------
     if (s_stateManager.getState() == System::SystemState::SENSOR_ERROR) {
         static uint32_t lastRecoveryAttemptMs = 0;
@@ -298,7 +261,7 @@ void loop() {
     }
 
     // -------------------------------------------------------------------------
-    // 6. Periodic Diagnostic Heartbeat (Every 5 seconds)
+    // 5. Periodic Diagnostic Heartbeat (Every 5 seconds)
     // -------------------------------------------------------------------------
     s_diagnostics.logHeartbeat(s_stateManager.getState(), s_bleMouse.isConnected(), s_sensorErrorCount);
 }

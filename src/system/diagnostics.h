@@ -12,7 +12,6 @@
 #include "../sensors/imu_calibration.h"
 #include "../system/state_manager.h"
 #include "../input/button_manager.h"
-#include "../peripherals/laser_controller.h"
 
 namespace System {
 
@@ -27,7 +26,6 @@ public:
     void printCalibrationResult(const Sensors::GyroCalibrationResult& result);
     void printBLEStatus(bool advertising, bool connected);
     void printButtonEvent(Input::ButtonEvent event);
-    void printLaserEvent(Peripherals::LaserState state, uint32_t activeDurationMs);
     void printStateTransition(SystemState oldState, SystemState newState);
     void printSensorError(uint32_t errorCount, const char* action);
 

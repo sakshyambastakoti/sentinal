@@ -1,6 +1,6 @@
 /**
  * @file button_manager.h
- * @brief Deterministic Debounced Button Manager with Event Detection.
+ * @brief Deterministic Debounced Button Manager with Instant Click and Long-Press Detection.
  */
 
 #pragma once
@@ -11,20 +11,13 @@
 
 namespace Input {
 
-enum class ButtonId : uint8_t {
-    BUTTON_A,
-    BUTTON_B
-};
-
 enum class ButtonEvent : uint8_t {
     NONE,
     BUTTON_A_SHORT_PRESS,
     BUTTON_B_SHORT_PRESS,
     BUTTON_A_LONG_PRESS,
     BUTTON_B_LONG_PRESS,
-    SIMULTANEOUS_PRESS,
-    LASER_HOLD_ENGAGE,
-    LASER_HOLD_RELEASE
+    SIMULTANEOUS_PRESS
 };
 
 class ButtonManager {
@@ -42,7 +35,6 @@ public:
 
     bool isButtonAPressed() const { return _btnA.isPressed; }
     bool isButtonBPressed() const { return _btnB.isPressed; }
-    bool isLaserRequested() const { return _laserRequested; }
 
 private:
     struct ButtonState {
@@ -55,14 +47,10 @@ private:
         bool     longPressTriggered;
         bool     chorded;
         uint32_t lastReleaseTime;
-        bool     waitingForSecondTap;
-        bool     doubleTapHoldEngaged;
     };
 
     ButtonState _btnA;
     ButtonState _btnB;
-    bool _laserRequested;
-    uint32_t _simultaneousPressStart;
     bool _simultaneousTriggered;
 
     void updatePhysicalButton(ButtonState& btn, uint32_t now);

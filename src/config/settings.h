@@ -53,10 +53,6 @@ namespace Settings {
     // =========================================================================
     // Motion Processing & Cursor Tuning
     // =========================================================================
-    // Axis Mapping:
-    // With standard handheld orientation (USB facing forward, MPU flat):
-    // - Wrist left/right rotation (Yaw, Z axis) maps to Cursor X
-    // - Wrist up/down tilt (Pitch, X or Y axis) maps to Cursor Y
     enum GyroAxis : uint8_t {
         AXIS_X = 0,
         AXIS_Y = 1,
@@ -79,7 +75,6 @@ namespace Settings {
     constexpr float FILTER_ALPHA      = 0.45f;
 
     // Velocity-based cursor acceleration:
-    // Accelerates cursor displacement when moving quickly, preserves precision when moving slowly.
     constexpr bool  ACCEL_ENABLED     = true;
     constexpr float ACCEL_THRESHOLD   = 22.0f;  // deg/s threshold to initiate acceleration
     constexpr float ACCEL_GAIN        = 0.018f; // Acceleration scaling coefficient
@@ -94,25 +89,8 @@ namespace Settings {
     // =========================================================================
     constexpr uint32_t BUTTON_DEBOUNCE_MS     = 25;  // 25 ms debounce filter
     constexpr uint32_t BUTTON_LONG_PRESS_MS   = 750; // 750 ms to trigger long press
-    constexpr uint32_t BUTTON_DOUBLE_CLICK_MS = 300; // Max time between clicks for double-click
     constexpr uint32_t BUTTON_SIMULTANEOUS_MS = 50;  // Window to detect chorded press
     constexpr uint32_t BUTTON_STUCK_WARN_MS   = 25000; // 25s warning for stuck button
-
-    // =========================================================================
-    // Laser Module Safety Parameters
-    // =========================================================================
-    // Safety Hard Timeout: automatically switches OFF laser after this duration
-    // even if the activation control continues to be held.
-    constexpr uint32_t LASER_MAX_ON_TIME_MS   = 5000; // 5.0 seconds hard timeout
-    // Mandatory cooldown time after a hard timeout before re-activation is permitted:
-    constexpr uint32_t LASER_COOLDOWN_MS      = 1000; // 1.0 second cooldown
-
-    // Laser activation gesture definition:
-    // For V1, laser requires a deliberate "Double-Click and Hold" on Button B:
-    //   1) Quick tap on Button B (<300ms)
-    //   2) Second press on Button B held down -> Laser engages immediately and stays ON
-    //   3) Releasing Button B immediately switches laser OFF.
-    // This completely separates laser activation from normal clicks and single long-press!
 
     // =========================================================================
     // Diagnostics & Watchdog

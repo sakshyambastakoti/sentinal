@@ -13,7 +13,6 @@ Diagnostics::Diagnostics()
 
 void Diagnostics::init(uint32_t baudRate) {
     Serial.begin(baudRate);
-    // On ESP32-S3 Native USB CDC, allow a brief window for terminal connection
     uint32_t start = millis();
     while (!Serial && (millis() - start < 1500)) {
         delay(10);
@@ -29,8 +28,8 @@ void Diagnostics::printStartupBanner() {
     Serial.printf("Flash Size:    %u KB\n", ESP.getFlashChipSize() / 1024);
     Serial.printf("Free Heap:     %u Bytes\n", ESP.getFreeHeap());
     Serial.printf("Pins:          SDA: GPIO%u | SCL: GPIO%u\n", Config::Pins::I2C_SDA, Config::Pins::I2C_SCL);
-    Serial.printf("               Btn A: GPIO%u | Btn B: GPIO%u | Laser: GPIO%u\n",
-                  Config::Pins::BUTTON_A, Config::Pins::BUTTON_B, Config::Pins::LASER_DRIVER);
+    Serial.printf("               Btn A: GPIO%u | Btn B: GPIO%u\n",
+                  Config::Pins::BUTTON_A, Config::Pins::BUTTON_B);
     Serial.println("Type 'd' to toggle motion debug stream; 'r' to recalibrate.");
     Serial.println("=======================================================\n");
 }
@@ -85,30 +84,7 @@ void Diagnostics::printButtonEvent(Input::ButtonEvent event) {
         case Input::ButtonEvent::SIMULTANEOUS_PRESS:
             Serial.println("[INPUT] Simultaneous Press (Both A & B): Reserved for future mode selection");
             break;
-        case Input::ButtonEvent::LASER_HOLD_ENGAGE:
-            Serial.println("[INPUT] Gesture Detected: Laser Hold Engaged");
-            break;
-        case Input::ButtonEvent::LASER_HOLD_RELEASE:
-            Serial.println("[INPUT] Gesture Released: Laser Hold Disengaged");
-            break;
         default:
-            break;
-    }
-}
-
-void Diagnostics::printLaserEvent(Peripherals::LaserState state, uint32_t activeDurationMs) {
-    switch (state) {
-        case Peripherals::LaserState::ACTIVE:
-            Serial.println("[LASER] >> Laser Active (Driver Pin HIGH) <<");
-            break;
-        case Peripherals::LaserState::OFF:
-            Serial.printf("[LASER] Laser Deactivated (Total ON Time: %u ms)\n", activeDurationMs);
-            break;
-        case Peripherals::LaserState::TIMED_OUT:
-            Serial.println("[LASER] >> SAFETY TIMEOUT: Max continuous duration exceeded (5s limit)! Laser forced OFF <<");
-            break;
-        case Peripherals::LaserState::INTERLOCK_INHIBITED:
-            Serial.println("[LASER] Interlock Tripped: Laser Inhibited due to state condition");
             break;
     }
 }

@@ -44,12 +44,6 @@ public:
         return (_currentState == SystemState::AIR_MOUSE_ACTIVE);
     }
 
-    bool isLaserPermitted() const {
-        return (_currentState == SystemState::READY ||
-                _currentState == SystemState::AIR_MOUSE_ACTIVE ||
-                _currentState == SystemState::AIR_MOUSE_PAUSED);
-    }
-
     void setStateChangeCallback(StateChangeCallback cb) {
         _callback = cb;
     }

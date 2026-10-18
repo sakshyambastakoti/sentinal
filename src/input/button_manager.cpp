@@ -1,6 +1,6 @@
 /**
  * @file button_manager.cpp
- * @brief Implementation of debounced button events, gestures, and chording.
+ * @brief Implementation of debounced button events, long press separation, and chording.
  */
 
 #include "button_manager.h"
@@ -8,9 +8,7 @@
 namespace Input {
 
 ButtonManager::ButtonManager()
-    : _laserRequested(false),
-      _simultaneousPressStart(0),
-      _simultaneousTriggered(false) {
+    : _simultaneousTriggered(false) {
     memset(&_btnA, 0, sizeof(_btnA));
     memset(&_btnB, 0, sizeof(_btnB));
 }
@@ -64,13 +62,6 @@ ButtonEvent ButtonManager::update() {
     if (_btnA.isPressed && _btnB.isPressed) {
         _btnA.chorded = true;
         _btnB.chorded = true;
-        _btnB.waitingForSecondTap = false;
-
-        if (_btnB.doubleTapHoldEngaged) {
-            _btnB.doubleTapHoldEngaged = false;
-            _laserRequested = false;
-            return ButtonEvent::LASER_HOLD_RELEASE;
-        }
 
         if (!_simultaneousTriggered) {
             _simultaneousTriggered = true;
@@ -109,23 +100,9 @@ ButtonEvent ButtonManager::update() {
     }
 
     // -------------------------------------------------------------------------
-    // 3. Button B Processing (Right Click, Laser Gesture Hold, Recalibrate)
+    // 3. Button B Processing (Right Click / Long Press Recalibrate)
     // -------------------------------------------------------------------------
     if (_btnB.isPressed) {
-        if (_btnB.doubleTapHoldEngaged) {
-            // Already holding laser; maintain state
-            _laserRequested = true;
-            return ButtonEvent::NONE;
-        }
-
-        if (_btnB.waitingForSecondTap) {
-            // Second tap detected within window! Engage Laser Hold
-            _btnB.waitingForSecondTap = false;
-            _btnB.doubleTapHoldEngaged = true;
-            _laserRequested = true;
-            return ButtonEvent::LASER_HOLD_ENGAGE;
-        }
-
         if (!_btnB.chorded && !_btnB.longPressTriggered) {
             if ((now - _btnB.pressStartTime) >= Config::Settings::BUTTON_LONG_PRESS_MS) {
                 _btnB.longPressTriggered = true;
@@ -133,15 +110,7 @@ ButtonEvent ButtonManager::update() {
             }
         }
     } else {
-        // Button B is released
-        if (_btnB.doubleTapHoldEngaged) {
-            _btnB.doubleTapHoldEngaged = false;
-            _laserRequested = false;
-            _btnB.pressStartTime = 0;
-            _btnB.chorded = false;
-            return ButtonEvent::LASER_HOLD_RELEASE;
-        }
-
+        // Just released
         if (_btnB.pressStartTime > 0) {
             uint32_t holdDuration = _btnB.lastReleaseTime - _btnB.pressStartTime;
             bool wasChorded = _btnB.chorded;
@@ -152,15 +121,6 @@ ButtonEvent ButtonManager::update() {
             _btnB.longPressTriggered = false;
 
             if (!wasChorded && !wasLong && holdDuration < Config::Settings::BUTTON_LONG_PRESS_MS) {
-                // Short tap released: start double-tap gesture window
-                _btnB.waitingForSecondTap = true;
-            }
-        }
-
-        // If waiting for second tap and window expired, emit standard Right-Click!
-        if (_btnB.waitingForSecondTap) {
-            if ((now - _btnB.lastReleaseTime) >= Config::Settings::BUTTON_DOUBLE_CLICK_MS) {
-                _btnB.waitingForSecondTap = false;
                 return ButtonEvent::BUTTON_B_SHORT_PRESS;
             }
         }

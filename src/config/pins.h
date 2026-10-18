@@ -27,8 +27,7 @@ namespace Pins {
     // =========================================================================
     // I2C Bus Pins (MPU6050 6-Axis Motion Sensor)
     // =========================================================================
-    // GPIO8 and GPIO9 are standard hardware I2C peripheral pins on the right header.
-    // They are fully bidirectional, free of strapping dependencies, and support 400kHz.
+    // Standard hardware I2C peripheral pins on the right header.
     constexpr uint8_t I2C_SDA = 8;
     constexpr uint8_t I2C_SCL = 9;
 
@@ -42,19 +41,13 @@ namespace Pins {
     constexpr uint8_t BUTTON_B = 6;
 
     // =========================================================================
-    // Laser Module Driver Control (Active-HIGH Output)
+    // Expansion Pins
     // =========================================================================
-    // Drives the gate of an N-Channel MOSFET (e.g. 2N7000 / IRLML2502) or the base
-    // of an NPN transistor (e.g. 2N2222) through a series resistor.
-    // A 10k pull-down resistor to GND on this gate is MANDATORY to guarantee the
-    // laser remains OFF during power-up, reset, or bootloader execution.
-    constexpr uint8_t LASER_DRIVER = 7;
+    constexpr uint8_t EXPANSION_GPIO7 = 7; // Available general GPIO (free expansion)
 
     // =========================================================================
     // Onboard Status LED (Optional visual indicator)
     // =========================================================================
-    // Many ESP32-S3 Super Mini variants route an onboard indicator or WS2812 LED to GPIO48.
-    // Set to 48 or 255 if unused.
     constexpr uint8_t ONBOARD_LED = 48;
 
 } // namespace Pins
