@@ -68,9 +68,9 @@ namespace Settings {
     };
 
     constexpr GyroAxis AXIS_MAP_X   = AXIS_Z;  // Yaw rate drives cursor X
-    constexpr bool     INVERT_X     = false;   // Corrected: Inverted from true -> matches physical left/right
+    constexpr bool     INVERT_X     = true;    // Corrected: Inverted to match physical motion (left = left, right = right)
     constexpr GyroAxis AXIS_MAP_Y   = AXIS_X;  // Pitch rate drives cursor Y
-    constexpr bool     INVERT_Y     = true;    // Corrected: Inverted from false -> matches physical up/down
+    constexpr bool     INVERT_Y     = true;    // Matches physical motion (up = up, down = down)
 
     constexpr float GYRO_DEADZONE_DPS = 1.25f;
     constexpr float SENSITIVITY_X     = 0.15f;
