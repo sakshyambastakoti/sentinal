@@ -42,8 +42,9 @@ public:
 
     /**
      * @brief Check for incoming serial commands:
-     *        'd' = toggle debug stream, 'r' = recalibrate, 'm' = cycle mode, 'i' = toggle invert.
-     * @return 1 for debug, 2 for recalib, 3 for mode switch, 4 for toggle invert, 0 for none.
+     *        'd' = toggle debug stream, 'r' = recalibrate, 'm' = cycle mode,
+     *        'i' = toggle both inverts, 'x' = toggle invert X, 'y' = toggle invert Y.
+     * @return 1 for debug, 2 for recalib, 3 for mode switch, 4 for toggle both, 5 for invert X, 6 for invert Y, 0 for none.
      */
     uint8_t processSerialCommands();
 

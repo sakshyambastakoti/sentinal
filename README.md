@@ -1,246 +1,167 @@
-# ESP32-S3 Air Mouse Prototype V1 — Production Firmware
+# Sentinal — 3-in-1 ESP32-S3 Wireless Air Mouse & Controller
 
-A production-grade, modular firmware implementation for a handheld BLE HID Air Mouse built on the **ESP32-S3 Super Mini**, featuring an **MPU6050 6-axis IMU**, tactile button management, a dedicated safety-interlocked laser diode driver, and real-time USB CDC telemetry.
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/sakshyambastakoti/sentinal/releases)
+[![Platform](https://img.shields.io/badge/Platform-ESP32--S3-orange.svg)](https://www.espressif.com/en/products/socs/esp32-s3)
+[![Framework](https://img.shields.io/badge/Framework-PlatformIO%20%7C%20Arduino-brightgreen.svg)](https://platformio.org/)
+[![Bluetooth](https://img.shields.io/badge/BLE-NimBLE--Arduino-purple.svg)](https://github.com/h2zero/NimBLE-Arduino)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**Sentinal** is a production-grade, multi-mode handheld Bluetooth Low Energy (BLE) HID controller designed for the **ESP32-S3FH4R2 Super Mini** micro-board and an **MPU6050 6-axis IMU**.
+
+Sentinal operates as a unified composite HID peripheral (Mouse + Keyboard + Consumer Control) seamlessly compatible with **Windows**, **macOS**, **Linux**, **Android**, and **Apple iOS**.
 
 ---
 
-## 1. Project Overview & Architecture
+## 1. Core Operating Modes
 
-The firmware is designed with strict separation of concerns, deterministic non-blocking timing, and fail-safe hardware defaults.
+Sentinal features 3 distinct operational modes with instant, non-blocking hardware switching and visual LED blink indication:
 
 ```
-sentinal/
-├── platformio.ini              # PlatformIO environment, build flags, and pinned dependencies
-├── wiring.md                   # Complete electrical diagrams, pinout table, and driver schematics
-├── README.md                   # System documentation, user guide, and testing protocol
-└── src/
-    ├── main.cpp                # Executive lifecycle and non-blocking event dispatcher
-    ├── config/
-    │   ├── pins.h              # Centralized GPIO allocations with validation notes
-    │   └── settings.h          # Centralized operational settings and tunable parameters
-    ├── sensors/
-    │   ├── imu_driver.h        # Direct high-speed I2C register driver for MPU6050
-    │   ├── imu_driver.cpp      # Burst reads (14-byte), dual-address probing, bus recovery
-    │   ├── imu_calibration.h   # Zero-rate gyro bias estimation and motion detection
-    │   └── imu_calibration.cpp # Stationary variance analysis and offset calculation
-    ├── input/
-    │   ├── button_manager.h    # Tactile button state machine and gesture classifier
-    │   └── button_manager.cpp  # Software debouncing (25ms), chording, long-press separation
-    ├── motion/
-    │   ├── motion_processor.h  # Rate-to-cursor displacement engine
-    │   └── motion_processor.cpp# Deadzone ramp, IIR filtering, sub-pixel accumulator, acceleration
-    ├── connectivity/
-    │   ├── ble_mouse.h         # NimBLE HID mouse server interface
-    │   └── ble_mouse.cpp       # HID mouse descriptors, report dispatcher, auto-reconnection
-    ├── peripherals/
-    │   ├── laser_controller.h  # Safety-conscious laser diode controller
-    │   └── laser_controller.cpp# 5-second hard timeout, interlocks, hardware auditing
-    └── system/
-        ├── state_manager.h     # 7-state deterministic system FSM
-        ├── state_manager.cpp   # Transition validation and safety observers
-        ├── diagnostics.h       # USB CDC serial telemetry and command interface
-        └── diagnostics.cpp     # Startup banner, register logging, heartbeat, debug streaming
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        SENTINAL MODES                           │
+  ├───────────────────┬──────────────────────┬──────────────────────┤
+  │ Mode 1 (1 Blink)  │   Mode 2 (2 Blinks)  │   Mode 3 (3 Blinks)  │
+  │     AIR MOUSE     │ PRESENTATION REMOTE  │    REEL SCROLLER     │
+  │  PC / Mac / Linux │  PowerPoint / Keynote│ Instagram / TikTok   │
+  └───────────────────┴──────────────────────┴──────────────────────┘
 ```
 
+### Mode 1: 6-Axis Gyro Air Mouse (1 LED Blink)
+- **High-Precision Cursor Motion:** Powered by a 100 Hz angular velocity pipeline (gyro rate, not unstable accelerometer gravity). Micro-tremor deadzone, first-order IIR smoothing ($\alpha = 0.45$), sub-pixel fractional accumulator, and velocity acceleration.
+- **Button A (Tap):** Left-Click.
+- **Button B (Tap):** Right-Click.
+- **Button A (Hold $\ge 700\text{ ms}$):** Freeze / Reposition Pointer (re-centering without moving on-screen cursor).
+- **Button B (Hold $\ge 700\text{ ms}$):** Stationary Zero-Rate Gyro Recalibration.
+
+### Mode 2: Presentation Remote (2 LED Blinks)
+- Air mouse cursor movement is paused for steady hand delivery.
+- **Button A (Tap):** Next Slide (`PAGE_DOWN`).
+- **Button B (Tap):** Previous Slide (`PAGE_UP`).
+- **Button A (Hold $\ge 700\text{ ms}$):** Start / Toggle Fullscreen Presentation (`F5`).
+- **Button B (Hold $\ge 700\text{ ms}$):** Stationary Gyro Recalibration.
+
+### Mode 3: Social Reel / Short Video Scroller (3 LED Blinks)
+- Optimized for mobile smartphones (iOS & Android) and web browsers.
+- **Button A (Tap):** Next Video (Touch drag swipe up + `DOWN_ARROW` + mouse scroll).
+- **Button B (Tap):** Previous Video (Touch drag swipe down + `UP_ARROW` + mouse scroll).
+- **Button A (Hold $\ge 700\text{ ms}$):** Like / Play-Pause (Double-tap left click + `SPACE`).
+- **Button B (Hold $\ge 700\text{ ms}$):** Stationary Gyro Recalibration.
+
 ---
 
-## 2. Hardware Bill of Materials & Pin Assignments
+## 2. Hardware Pinout & Wiring Specifications
 
-| Component | Function | ESP32-S3 Super Mini Pin | Notes |
-|:----------|:---------|:------------------------|:------|
-| **MPU6050 IMU** | I2C Data (`SDA`) | **GPIO8** | Right header, 400 kHz Fast-Mode |
-| **MPU6050 IMU** | I2C Clock (`SCL`) | **GPIO9** | Right header |
-| **Button A** | Left-Click / Pause | **GPIO5** | Left header, active-LOW (`INPUT_PULLUP` to GND) |
-| **Button B** | Right-Click / Recalib / Laser | **GPIO6** | Left header, active-LOW (`INPUT_PULLUP` to GND) |
-| **Laser Driver** | Driver Gate/Base | **GPIO7** | Left header, active-HIGH through 220 Ω to MOSFET |
-| **Power** | 3.3 V Logic Rail | **3V3** | Powers MPU6050 logic |
-| **Ground** | Common Return | **GND** | Star-ground reference |
+Engineered specifically for the **ESP32-S3FH4R2 Super Mini**:
 
-*(Refer to [wiring.md](file:///e:/Downloads/sentinal/wiring.md) for full electrical schematics and transistor/MOSFET driver circuits).*
-
----
-
-## 3. Development Environment & Build Configuration
-
-- **IDE:** Visual Studio Code with PlatformIO Extension
-- **MCU:** Espressif ESP32-S3 (Xtensa Dual-Core LX7 @ 240 MHz)
-- **Framework:** Arduino-ESP32 (`framework-arduinoespressif32 @ 3.1.3` / ESP-IDF 5.3)
-- **BLE Stack:** `h2zero/NimBLE-Arduino @ ^1.4.2`
-  - High-efficiency BLE stack (~150 KB lower flash consumption than Bluedroid).
-  - Native HID service implementation with fast reconnection.
-- **Native USB CDC:** Enabled via `-DARDUINO_USB_CDC_ON_BOOT=1` and `-DARDUINO_USB_MODE=1` to provide seamless serial diagnostics directly over the board's USB-C port.
-
-### `platformio.ini`
-```ini
-[env:esp32-s3-devkitc-1]
-platform = espressif32
-board = esp32-s3-devkitc-1
-framework = arduino
-monitor_speed = 115200
-build_flags = 
-    -DARDUINO_USB_CDC_ON_BOOT=1
-    -DARDUINO_USB_MODE=1
-lib_deps = 
-    h2zero/NimBLE-Arduino @ ^1.4.2
+```
+                              ESP32-S3FH4R2 Super Mini
+                               ┌─────────────────────┐
+        Toy Laser (+) Wire <── │ [5V/VBUS]  [GPIO 7] │ <── Button Mode (Cycle Operating Modes)
+         Common Ground GND <── │ [  GND  ]  [GPIO 6] │ <── Button B (Right Click / Recalib / Prev)
+          MPU6050 VCC (3V) <── │ [  3V3  ]  [GPIO 5] │ <── Button A (Left Click / Pause / Next)
+         MPU6050 SDA (I2C) <── │ [GPIO 1 ]  [GPIO 4] │ ──> Mode LED (1x, 2x, 3x Mode Blinks)
+         MPU6050 SCL (I2C) <── │ [GPIO 2 ]  [GPIO 3] │ ──> BLE Status LED (Blink=Searching, Solid=Connected)
+        (Unused Expansion) <── │ [GPIO 8 ]  [GPIO 10]│ ──> Action LED (Lights while pressing button)
+        (Unused Expansion) <── │ [GPIO 9 ]  [GPIO 11]│ ──> (Unused Expansion)
+                               │         [USB-C]     │
+                               └─────────────────────┘
 ```
 
----
+### Complete Connection Table
 
-## 4. Key Functional Subsystems
-
-### A. Motion Processing Pipeline
-
-Unlike basic implementations that map raw accelerometer gravity to mouse position (which suffers from tilt lock and severe drift), the V1 motion pipeline is powered directly by calibrated **angular velocity (gyro rate)**:
-
-1. **Dual-Address I2C Acquisition (100 Hz):**
-   - Fast 14-byte burst read of accelerometer, temperature, and gyro registers in ~350 µs.
-   - Automatically probes primary address `0x68` (AD0 = GND) and secondary `0x69` (AD0 = 3.3V).
-2. **Stationary Bias Correction:**
-   - 2-second initial bias calibration removes zero-rate offset ($\text{rate} - \text{offset}$).
-3. **Deadzone Ramp:**
-   - Angular velocities below $1.25^\circ/\text{s}$ are suppressed to zero.
-   - Velocities above $1.25^\circ/\text{s}$ ramp smoothly without a sudden step jump.
-4. **First-Order IIR Smoothing:**
-   - Low-pass filter ($\alpha = 0.45$) attenuates high-frequency hand tremors.
-5. **Velocity-Based Cursor Acceleration:**
-   - Above $22^\circ/\text{s}$, a quadratic multiplier accelerates the cursor for fast screen traversal.
-6. **Sub-Pixel Fractional Accumulation:**
-   - Retains fractional pixels across frames, ensuring micro-movements are never truncated or lost.
-
-### B. Finite State Machine (FSM)
-
-The system operates under an explicit 7-state FSM managed by [state_manager.cpp](file:///e:/Downloads/sentinal/src/system/state_manager.cpp):
-
-```mermaid
-stateDiagram-v2
-    [*] --> INITIALIZING
-    INITIALIZING --> CALIBRATING: MPU6050 Detected
-    INITIALIZING --> SENSOR_ERROR: I2C Comm Failure
-    CALIBRATING --> BLE_DISCONNECTED: Calibrated (No BLE Host)
-    CALIBRATING --> AIR_MOUSE_ACTIVE: Calibrated (Host Connected)
-    BLE_DISCONNECTED --> AIR_MOUSE_ACTIVE: BLE Host Connected
-    AIR_MOUSE_ACTIVE --> BLE_DISCONNECTED: BLE Connection Lost
-    AIR_MOUSE_ACTIVE --> AIR_MOUSE_PAUSED: Button A Long-Press
-    AIR_MOUSE_PAUSED --> AIR_MOUSE_ACTIVE: Button A Long-Press
-    AIR_MOUSE_ACTIVE --> CALIBRATING: Button B Long-Press
-    AIR_MOUSE_ACTIVE --> SENSOR_ERROR: Repeated I2C Timeouts
-    SENSOR_ERROR --> CALIBRATING: Auto-Recovery Success
-```
-
-### C. Button Gestures (V1 Mapping)
-
-- **Button A (Short Press):** Left-Click (emitted on release if $< 750\text{ ms}$).
-- **Button B (Short Press):** Right-Click (emitted on release if $< 750\text{ ms}$).
-- **Button A (Long Press $\ge 750\text{ ms}$):** Toggles **Air Mouse Motion Pause / Resume**.
-  - Allows repositioning the physical hand in the air without displacing the on-screen cursor (re-centering).
-- **Button B (Long Press $\ge 750\text{ ms}$):** Initiates **Stationary Gyro Recalibration**.
-- **Button B (Double-Tap & Hold):** Activates the **Laser Diode**.
-  - Tap once, press again within 300 ms, and hold -> Laser stays ON.
-  - Releasing Button B immediately switches laser OFF.
-- **Both Buttons Held Simultaneously:** Chorded combination reserved for future V2 modes. Does not trigger clicks or laser.
-
-### D. Laser Safety Interlocks
-
-1. **Hardware Failsafe:** Mandatory 10 kΩ pull-down resistor on MOSFET gate guarantees laser is OFF during MCU reset, boot, and brownout.
-2. **Software Initialization:** GPIO7 is driven `LOW` as the first instruction in `setup()`.
-3. **Hard Timeout:** If continuously held, the laser automatically cuts OFF after **5.0 seconds** (`LASER_MAX_ON_TIME_MS`).
-4. **Mandatory Cooldown:** Following a timeout, the user must release the button and wait **1.0 second** before re-activation.
-5. **State Interlock:** The laser is unconditionally inhibited in `SENSOR_ERROR`, `BLE_DISCONNECTED`, and `CALIBRATING` states.
-6. **Continuous Hardware Audit:** Every loop iteration audits the physical pin against the logic state.
+| Board Pin | Physical Position | Peripheral Target | Logic / Wiring Details |
+|:----------|:------------------|:------------------|:-----------------------|
+| **5V / VBUS** | Left Header, Pin 1 | **Toy Laser (+)** | Raw 5V bus directly from USB-C. |
+| **GND** | Left Header, Pin 2 | **Common Ground** | Star ground: MPU6050 GND, Laser (-), Buttons, and LED Cathodes. |
+| **3V3** | Left Header, Pin 3 | **MPU6050 VCC** | Clean 3.3V power from onboard LDO. |
+| **GPIO 1** | Left Header, Pin 4 | **MPU6050 SDA** | Hardware I2C SDA (100 kHz standard mode). |
+| **GPIO 2** | Left Header, Pin 5 | **MPU6050 SCL** | Hardware I2C SCL (100 kHz standard mode). |
+| **GPIO 7** | Right Header, Pin 1 | **Button Mode** | Active-LOW (`INPUT_PULLUP`). Tap to cycle mode, hold to reset. |
+| **GPIO 6** | Right Header, Pin 2 | **Button B** | Active-LOW (`INPUT_PULLUP`). Action B / Prev / Recalib. |
+| **GPIO 5** | Right Header, Pin 3 | **Button A** | Active-LOW (`INPUT_PULLUP`). Action A / Next / Pause. |
+| **GPIO 4** | Right Header, Pin 4 | **Mode LED Anode (+)** | 1x, 2x, 3x flashes on mode changes (via 220Ω to GND). |
+| **GPIO 3** | Right Header, Pin 5 | **Status LED Anode (+)** | Bluetooth status: 1 Hz blink = advertising, Solid ON = connected. |
+| **GPIO 10** | Right Header, Pin 6 | **Action LED Anode (+)** | Lights up during button presses and clicks. |
+| **GPIO 48** | Built-in PCB LED | **Onboard LED** | Active-LOW: Automatically mirrors Status and Action signals. |
 
 ---
 
-## 5. Build, Flash, and Setup Instructions
+## 3. Bluetooth Pairing & Device Name
+
+- **Advertised Bluetooth Name:** **`Sentinal`**
+- **Manufacturer:** **`Sentinal`**
+- **Appearance:** `0x03C2` (Standard HID Mouse — required for native pointer routing on iOS and Android)
+- **Security:** BLE "Just Works" pairing with persistent bonded encryption keys.
+
+### Pairing with Host Devices:
+1. Power on Sentinal or plug into USB-C.
+2. The **Status LED (GPIO 3 / GPIO 48)** will blink steadily at 1 Hz while awaiting connection.
+3. On your PC, Mac, Android, or iPhone, open **Bluetooth Settings** and search for devices.
+4. Select **`Sentinal`** and click **Pair / Connect**.
+5. Once paired, the **Status LED turns solid ON**.
+
+---
+
+## 4. Apple iPhone / iOS Setup (AssistiveTouch)
+
+On iOS, Apple requires AssistiveTouch to be enabled for apps like Instagram and TikTok to accept touch scroll gestures:
+
+1. Open iPhone **Settings** $\rightarrow$ **Accessibility** $\rightarrow$ **Touch** $\rightarrow$ **AssistiveTouch**.
+2. Toggle **AssistiveTouch** to **ON**.
+3. In the same menu, verify **Perform Touch Gestures** is **ON**.
+4. Adjust **Tracking Sensitivity** to approximately **30%** (about 1/3 speed).
+5. Switch Sentinal to **Mode 3 (Reel Scroller)** by tapping **Button Mode** until the LED flashes 3 times.
+6. Open Instagram Reels, TikTok, or YouTube Shorts and tap Button A or B to scroll seamlessly!
+
+---
+
+## 5. USB Serial Telemetry & Diagnostics
+
+Sentinal provides continuous diagnostics over hardware USB CDC Serial at **115200 baud**:
+
+| Command Key | Action | Description |
+|:------------|:-------|:------------|
+| `'d'` / `'D'` | Toggle Debug Stream | Streams live gyro rates and HID `dx`/`dy` deltas. |
+| `'r'` / `'R'` | Stationary Recalibrate | Triggers 2-second zero-rate gyro offset calibration. |
+| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Air Mouse $\rightarrow$ Presentation $\rightarrow$ Reels. |
+| `'i'` / `'I'` | Invert Both Axes | Toggles inversion for both X and Y simultaneously. |
+| `'x'` / `'X'` | Toggle Invert X | Flips horizontal axis direction on the fly. |
+| `'y'` / `'Y'` | Toggle Invert Y | Flips vertical axis direction on the fly. |
+| `'h'` / `'H'` | Help Menu | Prints firmware status and available serial commands. |
+
+---
+
+## 6. Build & Flash Instructions
 
 ### Prerequisites
-1. Install [VS Code](https://code.visualstudio.com/).
-2. Install the **PlatformIO IDE** extension from the VS Code Marketplace.
-3. Connect the ESP32-S3 Super Mini to your PC using a high-quality USB-C data cable.
+- [Visual Studio Code](https://code.visualstudio.com/) + [PlatformIO IDE Extension](https://platformio.org/)
+- High-quality USB-C data cable connected to the ESP32-S3 Super Mini.
 
-### Compilation & Flashing
-1. Open this project folder (`sentinal`) in VS Code.
-2. PlatformIO will automatically parse `platformio.ini` and download required toolchains and `NimBLE-Arduino`.
-3. Open the PlatformIO terminal and run:
-   ```bash
-   # Compile project
-   pio run
+### Compile & Upload:
+```bash
+# Clone the repository
+git clone https://github.com/sakshyambastakoti/sentinal.git
+cd sentinal
 
-   # Upload firmware to ESP32-S3
-   pio run --target upload
+# Build the firmware
+pio run
 
-   # Open USB Serial Monitor (115200 baud)
-   pio device monitor
-   ```
+# Flash to your board
+pio run --target upload
 
-> [!NOTE]
-> If your ESP32-S3 fails to enter upload mode automatically:
-> 1. Press and hold the **BOOT** button on the Super Mini.
-> 2. Press and release the **RESET** button.
-> 3. Release the **BOOT** button.
-> 4. Trigger the upload again.
+# Open the serial monitor
+pio device monitor
+```
 
 ---
 
-## 6. Windows BLE Pairing & Troubleshooting
+## 7. Version History
 
-1. Open **Windows Settings** -> **Bluetooth & devices** -> **Add device**.
-2. Select **Bluetooth**.
-3. Locate **`S3 Air Mouse V1`** in the list and click to pair.
-4. Windows will configure the device as an input peripheral (*"Mouse, keyboard & pen"*).
-5. Open the Serial Monitor in VS Code. You will observe:
-   ```
-   [BLE] Device connected to Host PC! HID reports active.
-   [STATE] Transition: BLE_DISCONNECTED -> AIR_MOUSE_ACTIVE
-   ```
-
-### Troubleshooting
-- **Device does not appear in scan:** Verify that no other PC or phone has bonded with it. If needed, press Button B long-press to reset.
-- **Mouse cursor is drifting when held still:** Place the device on a flat, stable desk and perform a long press on Button B (or send `'r'` via serial monitor) to calibrate zero-rate bias.
-- **Laser turns off while holding:** This is the intentional 5-second safety cutoff preventing accidental eye exposure or thermal runaway.
-
----
-
-## 7. Interactive Serial Diagnostic Commands
-
-Connect a serial terminal at **115200 baud** to access real-time diagnostics:
-
-| Command | Action | Description |
-|:--------|:-------|:------------|
-| `'d'` or `'D'` | Toggle Motion Stream | Toggles live ASCII telemetry of gyro rates and HID `dx`/`dy` deltas. |
-| `'r'` or `'R'` | Recalibrate Gyro | Triggers a 2-second stationary bias calibration routine. |
-| `'h'` or `'H'` | Help | Displays interactive command options and firmware status. |
-
----
-
-## 8. Functional Acceptance & Testing Checklist
-
-| Test # | Description | Execution Procedure | Pass Criteria |
-|:-------|:------------|:--------------------|:--------------|
-| **T01** | Firmware Build | Execute `pio run` in clean workspace. | Exits with code 0; zero compilation errors or warnings. |
-| **T02** | Sensor Detection | Boot with MPU6050 attached at 0x68 and 0x69. | Log prints correct address and WHO_AM_I register value (0x68). |
-| **T03** | Stationary Calibration | Keep device still on desk during boot. | Calibration completes with $< 0.1^\circ/\text{s}$ noise and valid offsets. |
-| **T04** | Motion-Disturbed Calib | Gently shake device during calibration. | Log detects motion, rejects bad offsets, and keeps prior values. |
-| **T05** | BLE Pairing | Add device in Windows Bluetooth settings. | Pairs as `S3 Air Mouse V1` without PIN requirement. |
-| **T06** | Cursor Movement | Rotate wrist in pitch and yaw directions. | Cursor translates smoothly in X and Y on host PC. |
-| **T07** | Stationary Drift | Leave device stationary on mousepad for 60s. | Host cursor exhibits zero pixel jitter or drift. |
-| **T08** | Left-Click | Short tap on Button A ($< 750\text{ ms}$). | Left-click event received by OS; no cursor stutter. |
-| **T09** | Right-Click | Short tap on Button B ($< 750\text{ ms}$). | Context menu opens on host OS after 300 ms double-click window. |
-| **T10** | Motion Pause | Long press Button A ($\ge 750\text{ ms}$). | State shifts to `AIR_MOUSE_PAUSED`; cursor stops moving while repositioning. |
-| **T11** | Recalibration | Long press Button B ($\ge 750\text{ ms}$). | Calibration re-executes; log confirms updated offsets. |
-| **T12** | Laser Activation | Double-tap and hold Button B. | Laser turns ON immediately on second press and remains lit while held. |
-| **T13** | Laser Release | Release Button B from double-tap hold. | Laser turns OFF instantly with zero afterglow. |
-| **T14** | Laser Safety Timeout | Hold laser activation for $> 5.0\text{ s}$. | Laser turns OFF automatically at 5000 ms; cooldown enforced. |
-| **T15** | BLE Disconnect Safety | Disable Bluetooth on host PC while laser held. | State transitions to `BLE_DISCONNECTED`; laser forced OFF immediately. |
-
----
-
-## 9. Future V2 Extensibility Path
-
-The firmware architecture is prepared for the following V2 enhancements without refactoring core components:
-
-1. **Presentation Mode:**
-   - Dedicated navigation mode where Button A sends HID Keycode `PAGE_UP` (Previous slide) and Button B sends `PAGE_DOWN` (Next slide).
-2. **Auto-Reel Scrolling:**
-   - Automatic vertical scrolling via periodic HID wheel reports triggered by wrist flick gestures.
-3. **USB HID Dual-Mode:**
-   - Using ESP32-S3's native USB hardware to provide plug-and-play wired USB mouse operation when Bluetooth is unavailable.
+- **v1.0.0 (Current Release):**
+  - Official project branding as **Sentinal**.
+  - Bluetooth device broadcast name updated to **`Sentinal`**.
+  - Fixed MPU6050 physical motion inversion (`INVERT_X = false`, `INVERT_Y = true`).
+  - Added dedicated serial commands (`'x'`, `'y'`, `'i'`) for real-time axis fine-tuning.
+  - Full support for 3 Operating Modes (Air Mouse, Presentation Remote, Reel Scroller).
+  - Tri-color multi-action LED driver (Mode, Status, Action, and Onboard LED).
+  - High-performance NimBLE HID stack with auto-reconnection and composite Mouse/Keyboard/Consumer reports.

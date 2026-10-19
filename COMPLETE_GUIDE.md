@@ -1,4 +1,4 @@
-# ESP32-S3 Air Mouse V1 — Complete System, Hardware & Wiring Manual
+# Sentinal — Complete System, Hardware & Wiring Manual (v1.0.0)
 ### Specifically Tailored for the **ESP32-S3FH4R2 Super Mini** (4MB Flash + 2MB PSRAM)
 
 ---

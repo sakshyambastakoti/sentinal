@@ -30,7 +30,7 @@ void Diagnostics::printStartupBanner() {
     Serial.printf("Pins:          SDA: GPIO%u | SCL: GPIO%u\n", Config::Pins::I2C_SDA, Config::Pins::I2C_SCL);
     Serial.printf("               Btn A: GPIO%u | Btn B: GPIO%u | Btn Mode: GPIO%u\n",
                   Config::Pins::BUTTON_A, Config::Pins::BUTTON_B, Config::Pins::BUTTON_MODE);
-    Serial.println("Commands:      'd' = debug stream | 'r' = calib | 'm' = switch mode | 'i' = toggle axis invert");
+    Serial.println("Commands:      'd' = debug stream | 'r' = calib | 'm' = switch mode | 'i' = invert both | 'x' = invert X | 'y' = invert Y");
     Serial.println("=======================================================\n");
 }
 
@@ -181,12 +181,18 @@ uint8_t Diagnostics::processSerialCommands() {
             return 3;
         } else if (ch == 'i' || ch == 'I') {
             return 4;
+        } else if (ch == 'x' || ch == 'X') {
+            return 5;
+        } else if (ch == 'y' || ch == 'Y') {
+            return 6;
         } else if (ch == 'h' || ch == 'H') {
             Serial.println("[CMD] Available commands:");
             Serial.println("  'd' - Toggle motion telemetry stream");
             Serial.println("  'r' - Initiate stationary gyro recalibration");
             Serial.println("  'm' - Cycle operating mode (Air Mouse -> Presentation -> Reel Scroller)");
-            Serial.println("  'i' - Toggle axis inversion (Invert X / Y)");
+            Serial.println("  'i' - Toggle both axes inversion (Invert X & Y)");
+            Serial.println("  'x' - Toggle X-axis inversion specifically");
+            Serial.println("  'y' - Toggle Y-axis inversion specifically");
             Serial.println("  'h' - Display this help text");
         }
     }

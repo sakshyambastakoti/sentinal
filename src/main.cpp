@@ -1,11 +1,13 @@
 /**
  * @file main.cpp
- * @brief ESP32-S3 Air Mouse Prototype V1 - Main Application Lifecycle.
+ * @brief Sentinal - 3-in-1 ESP32-S3 BLE Controller (v1.0.0).
  *
  * Architecture:
- * - Sensors: MPU6050 6-axis IMU over I2C (GPIO8 SDA, GPIO9 SCL)
- * - Inputs: 2 Momentary Push Buttons (GPIO5 Btn A, GPIO6 Btn B)
- * - Connectivity: BLE HID Mouse (NimBLE-Arduino)
+ * - Sensors: MPU6050 6-axis IMU over I2C (GPIO1 SDA, GPIO2 SCL)
+ * - Inputs: 3 Momentary Push Buttons (GPIO5 Btn A, GPIO6 Btn B, GPIO7 Btn Mode)
+ * - Multi-Action LEDs: GPIO4 Mode LED, GPIO3 Status LED, GPIO10 Action LED, GPIO48 Onboard LED
+ * - Connectivity: BLE HID Composite Mouse & Keyboard (NimBLE-Arduino)
+ * - Operating Modes: Air Mouse (Mode 1), Presentation Remote (Mode 2), Reel Scroller (Mode 3)
  * - State Management: Deterministic FSM with safe state transitions
  * - Diagnostics: Hardware USB CDC Serial telemetry and commands
  */
@@ -290,7 +292,7 @@ void loop() {
     updateLEDs(now);
 
     // -------------------------------------------------------------------------
-    // 1. Process USB Serial Diagnostic Commands ('d', 'r', 'm', 'i')
+    // 1. Process USB Serial Diagnostic Commands ('d', 'r', 'm', 'i', 'x', 'y')
     // -------------------------------------------------------------------------
     uint8_t cmd = s_diagnostics.processSerialCommands();
     if (cmd == 2) {
@@ -300,7 +302,17 @@ void loop() {
     } else if (cmd == 4) {
         s_motionProcessor.toggleInvertX();
         s_motionProcessor.toggleInvertY();
-        Serial.printf("[CMD] Invert X: %s | Invert Y: %s\n",
+        Serial.printf("[CMD] Invert Both -> Invert X: %s | Invert Y: %s\n",
+                      s_motionProcessor.isInvertX() ? "TRUE" : "FALSE",
+                      s_motionProcessor.isInvertY() ? "TRUE" : "FALSE");
+    } else if (cmd == 5) {
+        s_motionProcessor.toggleInvertX();
+        Serial.printf("[CMD] Invert X -> Invert X: %s | Invert Y: %s\n",
+                      s_motionProcessor.isInvertX() ? "TRUE" : "FALSE",
+                      s_motionProcessor.isInvertY() ? "TRUE" : "FALSE");
+    } else if (cmd == 6) {
+        s_motionProcessor.toggleInvertY();
+        Serial.printf("[CMD] Invert Y -> Invert X: %s | Invert Y: %s\n",
                       s_motionProcessor.isInvertX() ? "TRUE" : "FALSE",
                       s_motionProcessor.isInvertY() ? "TRUE" : "FALSE");
     }

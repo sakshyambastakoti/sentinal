@@ -1,6 +1,6 @@
-# Hardware Wiring Specification — ESP32-S3FH4R2 Super Mini
+# Sentinal Hardware Wiring Specification — ESP32-S3FH4R2 Super Mini
 
-This document specifies the exact electrical wiring tailored to your **ESP32-S3FH4R2 Super Mini** board revision.
+This document specifies the exact electrical wiring for **Sentinal (v1.0.0)** tailored to your **ESP32-S3FH4R2 Super Mini** board revision.
 
 ---
 

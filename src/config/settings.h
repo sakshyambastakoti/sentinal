@@ -13,8 +13,8 @@ namespace Settings {
     // =========================================================================
     // System Information
     // =========================================================================
-    constexpr const char* FIRMWARE_NAME    = "ESP32-S3 Air Controller V2";
-    constexpr const char* FIRMWARE_VERSION = "2.0.0";
+    constexpr const char* FIRMWARE_NAME    = "Sentinal";
+    constexpr const char* FIRMWARE_VERSION = "1.0.0";
     constexpr uint32_t    SERIAL_BAUD_RATE = 115200;
 
     // =========================================================================
@@ -29,8 +29,8 @@ namespace Settings {
     // =========================================================================
     // BLE HID Settings
     // =========================================================================
-    constexpr const char* BLE_DEVICE_NAME  = "S3 Air Controller";
-    constexpr const char* BLE_MANUFACTURER = "Embedded-Prototype";
+    constexpr const char* BLE_DEVICE_NAME  = "Sentinal";
+    constexpr const char* BLE_MANUFACTURER = "Sentinal";
     constexpr uint16_t    BLE_APPEARANCE   = 0x03C2; // HID Mouse (0x03C2) - Required for Android & iOS pointer routing
     constexpr uint8_t     BLE_BATTERY_LVL  = 100;
     constexpr uint32_t    BLE_REPORT_INTERVAL_MS = 10;
@@ -68,9 +68,9 @@ namespace Settings {
     };
 
     constexpr GyroAxis AXIS_MAP_X   = AXIS_Z;  // Yaw rate drives cursor X
-    constexpr bool     INVERT_X     = true;    // Fixed: Inverted to match physical motion (right = right, left = left)
+    constexpr bool     INVERT_X     = false;   // Corrected: Inverted from true -> matches physical left/right
     constexpr GyroAxis AXIS_MAP_Y   = AXIS_X;  // Pitch rate drives cursor Y
-    constexpr bool     INVERT_Y     = false;   // Fixed: Inverted to match physical motion (up = up, down = down)
+    constexpr bool     INVERT_Y     = true;    // Corrected: Inverted from false -> matches physical up/down
 
     constexpr float GYRO_DEADZONE_DPS = 1.25f;
     constexpr float SENSITIVITY_X     = 0.15f;
