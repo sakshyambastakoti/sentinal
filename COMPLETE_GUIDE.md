@@ -5,18 +5,18 @@
 
 ## 1. Physical Board Pinout & Wiring Diagram
 
-Here is the exact pinout matching the silkscreen of your **ESP32-S3FH4R2 Super Mini**:
+The I2C pins are mapped to **GPIO 1** and **GPIO 2** (directly below `3V3` on the left header):
 
 ```
                               ESP32-S3FH4R2 Super Mini
                                ┌─────────────────────┐
-        Toy Laser (+) Wire <── │ [5V/VBUS]  [GPIO 7] │ ──> (Unused Expansion)
-         Common Ground GND <── │ [  GND  ]  [GPIO 6] │ <── Button B (Right Click / Recalib)
-          MPU6050 VCC (3V) <── │ [  3V3  ]  [GPIO 5] │ <── Button A (Left Click / Pause)
-        (Unused Expansion) <── │ [GPIO 1 ]  [GPIO 4] │ ──> (Unused Expansion)
-        (Unused Expansion) <── │ [GPIO 2 ]  [GPIO 3] │ ──> (Unused Expansion)
-         MPU6050 SDA (I2C) <── │ [GPIO 8 ]  [GPIO 10]│ ──> (Unused Expansion)
-         MPU6050 SCL (I2C) <── │ [GPIO 9 ]  [GPIO 11]│ ──> (Unused Expansion)
+        Toy Laser (+) Wire <── │ [5V/VBUS]  [GPIO 7] │ <── Button Mode (Cycle Operating Modes)
+         Common Ground GND <── │ [  GND  ]  [GPIO 6] │ <── Button B (Right Click / Recalib / Prev)
+          MPU6050 VCC (3V) <── │ [  3V3  ]  [GPIO 5] │ <── Button A (Left Click / Pause / Next)
+         MPU6050 SDA (I2C) <── │ [GPIO 1 ]  [GPIO 4] │ ──> Mode LED (Optional External Indicator)
+         MPU6050 SCL (I2C) <── │ [GPIO 2 ]  [GPIO 3] │ ──> (Unused Expansion)
+        (Unused Expansion) <── │ [GPIO 8 ]  [GPIO 10]│ ──> (Unused Expansion)
+        (Unused Expansion) <── │ [GPIO 9 ]  [GPIO 11]│ ──> (Unused Expansion)
                                │         [USB-C]     │
                                └─────────────────────┘
 ```
@@ -28,13 +28,15 @@ Here is the exact pinout matching the silkscreen of your **ESP32-S3FH4R2 Super M
 | Board Pin | Physical Position | Target Peripheral Pin | Function | Notes |
 |:---|:---|:---|:---|:---|
 | **5V/VBUS** | Left Header, Pin 1 (Top) | **Toy Laser (+)** | Laser Power | Direct 5V from USB-C. Powers toy laser without loading 3.3V LDO. |
-| **GND** | Left Header, Pin 2 | **Common Ground** | Ground Return | Tied to MPU6050 GND, Toy Laser (-), and Buttons common. |
+| **GND** | Left Header, Pin 2 | **Common Ground** | Ground Return | Tied to MPU6050 GND, Toy Laser (-), and all 3 Buttons common ground. |
 | **3V3** | Left Header, Pin 3 | **MPU6050 VCC** | 3.3V Power | Powers MPU6050 logic cleanly from onboard 3.3V regulator. |
-| **GPIO 8** | Left Header, Pin 6 | **MPU6050 SDA** | I2C Data | Hardware I2C SDA (400 kHz Fast-Mode). |
-| **GPIO 9** | Left Header, Pin 7 (Bottom)| **MPU6050 SCL** | I2C Clock | Hardware I2C SCL (400 kHz Fast-Mode). |
-| **GPIO 6** | Right Header, Pin 2 | **Button B** Pin 1 | Right-Click | Active-LOW (`INPUT_PULLUP`). Pin 2 goes to GND. Instant click response. |
-| **GPIO 5** | Right Header, Pin 3 | **Button A** Pin 1 | Left-Click | Active-LOW (`INPUT_PULLUP`). Pin 2 goes to GND. Instant click response. |
-| **GPIO 1, 2, 7, 4, 3, 10, 11** | Various | *Unused* | Expansion | Free GPIOs available for future features. |
+| **GPIO 1** | Left Header, Pin 4 | **MPU6050 SDA** | I2C Data | Hardware I2C SDA (100 kHz Standard Mode). Directly below 3V3. |
+| **GPIO 2** | Left Header, Pin 5 | **MPU6050 SCL** | I2C Clock | Hardware I2C SCL (100 kHz Standard Mode). Directly below GPIO 1. |
+| **GPIO 7** | Right Header, Pin 1 (Top)| **Button Mode** Pin 1 | Mode Switch | Active-LOW (`INPUT_PULLUP`). Pin 2 to GND. Tap to cycle mode; hold to reset. |
+| **GPIO 6** | Right Header, Pin 2 | **Button B** Pin 1 | Action B | Active-LOW (`INPUT_PULLUP`). Pin 2 to GND. Right-Click / Recalib / Prev. |
+| **GPIO 5** | Right Header, Pin 3 | **Button A** Pin 1 | Action A | Active-LOW (`INPUT_PULLUP`). Pin 2 to GND. Left-Click / Pause / Next. |
+| **GPIO 4** | Right Header, Pin 4 | **Mode LED Anode (+)**| Indicator | Optional external Mode LED (via 220Ω resistor to GND). |
+| **GPIO 8, 9, 3, 10, 11** | Various | *Unused* | Expansion | Free GPIOs available for future features. |
 
 ---
 
@@ -43,25 +45,38 @@ Here is the exact pinout matching the silkscreen of your **ESP32-S3FH4R2 Super M
 ### A. MPU6050 6-Axis Motion Sensor
 - **VCC** $\rightarrow$ **`3V3`** (Left Header, Pin 3)
 - **GND** $\rightarrow$ **`GND`** (Left Header, Pin 2)
-- **SDA** $\rightarrow$ **`GPIO 8`** (Left Header, Pin 6)
-- **SCL** $\rightarrow$ **`GPIO 9`** (Left Header, Pin 7)
+- **SDA** $\rightarrow$ **`GPIO 1`** (Left Header, Pin 4)
+- **SCL** $\rightarrow$ **`GPIO 2`** (Left Header, Pin 5)
 - **AD0** $\rightarrow$ Connect to **`GND`** (Selects default I2C address `0x68`)
 - **INT** $\rightarrow$ *Leave disconnected*
 
-### B. Tactile Push Buttons (Button A & Button B)
+### B. Tactile Push Buttons (Button A, Button B & Mode Button)
 The firmware automatically activates the ESP32-S3 internal pull-up resistors (`INPUT_PULLUP`):
-- **Button A (Left Click / Motion Pause):**
+- **Button Mode (Dedicated Mode Switch Button):**
+  - Pin 1 $\rightarrow$ **`GPIO 7`** (Right Header, Pin 1 — Top Right opposite 5V/VBUS)
+  - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
+  - *Short Tap:* Cycles Operating Modes:
+    1. **Mode 1: AIR_MOUSE** (LED 1 blink) — 6-Axis Desktop Air Mouse
+    2. **Mode 2: PRESENTATION** (LED 2 blinks) — Slide Clicker Remote
+    3. **Mode 3: REEL_SCROLLER** (LED 3 blinks) — TikTok / Reels / Shorts Scroller
+  - *Long Hold ($\ge 700\text{ ms}$):* Resets directly back to Mode 1 (Air Mouse)
+- **Button A (Action A):**
   - Pin 1 $\rightarrow$ **`GPIO 5`** (Right Header, Pin 3)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
-- **Button B (Right Click / Gyro Recalibrate):**
+  - *Air Mouse Mode:* Left Click (tap) / Pause-Resume motion (hold)
+  - *Presentation Mode:* Next Slide (`PAGE_DOWN`) / Fullscreen slideshow (`F5` hold)
+  - *Reel Scroller Mode:* Next Reel (Scroll Down + Down Arrow) / Play-Pause (`SPACE` hold)
+- **Button B (Action B):**
   - Pin 1 $\rightarrow$ **`GPIO 6`** (Right Header, Pin 2)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
+  - *Air Mouse Mode:* Right Click (tap) / Stationary Recalibration (hold)
+  - *Presentation Mode:* Previous Slide (`PAGE_UP`) / Stationary Recalibration (hold)
+  - *Reel Scroller Mode:* Previous Reel (Scroll Up + Up Arrow) / Stationary Recalibration (hold)
 
-*No external resistors or capacitors are needed.*
+*All 3 buttons connect between their respective GPIO and common GND. No external resistors or capacitors are needed.*
 
 ### C. Toy Laser Pointer Hookup
 - **Laser Positive (+)** $\rightarrow$ **`5V/VBUS`** (Left Header, Pin 1)
-  *(Or connect to `3V3` if your toy laser originally ran on 2 button cells / 3V).*
 - **Laser Negative (-)** $\rightarrow$ **`GND`** (Left Header, Pin 2)
 - Use the physical push button built into the toy laser body to turn the laser beam on and off.
 
@@ -81,45 +96,9 @@ Most novice air mouse sketches map accelerometer tilt angles directly to mouse p
 
 ---
 
-### B. Button Mapping & Gestures
-
-| Physical Action | Resulting Event | Function |
-|:---|:---|:---|
-| **Button A Short Press** ($< 750\text{ ms}$) | `BUTTON_A_SHORT_PRESS` | **Left Click** on Host PC (instant on release) |
-| **Button B Short Press** ($< 750\text{ ms}$) | `BUTTON_B_SHORT_PRESS` | **Right Click** on Host PC (instant on release) |
-| **Button A Long Press** ($\ge 750\text{ ms}$) | `BUTTON_A_LONG_PRESS` | **Toggle Motion Pause / Resume** (Allows lifting/repositioning your hand without moving cursor) |
-| **Button B Long Press** ($\ge 750\text{ ms}$) | `BUTTON_B_LONG_PRESS` | **Trigger Gyro Recalibration** (Keep device still to re-zero bias) |
-| **Both Buttons Held Together** | `SIMULTANEOUS_PRESS` | Reserved for future V2 modes. |
-
----
-
-### C. Bluetooth Low Energy (BLE) HID Stack
-- Implemented with **NimBLE-Arduino** configured specifically for the ESP32-S3.
-- Advertises as **`S3 Air Mouse V1`**.
-- Pairs seamlessly with Windows 10, Windows 11, macOS, Linux, Android, and iOS.
-- **Auto-Reconnection:** Automatically resumes advertising when disconnected and cleanly clears button states so keys never get stuck on your PC.
-
----
-
-### D. USB CDC Serial Diagnostics & Terminal Commands
-Connect via USB serial monitor at **115200 baud** for live telemetry:
-- **`'d'` or `'D'`**: Toggle real-time motion streaming (`[MOTION] Gx Gy | HID dx dy`).
-- **`'r'` or `'R'`**: Initiate stationary gyroscope recalibration over USB.
-- **`'h'` or `'H'`**: Print interactive command help and system status.
-- **Heartbeat:** Status log printed every 5 seconds (Uptime, State, BLE status, Free Heap).
-
----
-
 ## 5. How to Flash and Test
 
-### Step 1: Open in VS Code
-Open the project directory:
-```
-e:\Downloads\sentinal
-```
-Ensure the **PlatformIO IDE** extension is installed.
-
-### Step 2: Build & Flash
+### Step 1: Build & Flash
 Connect your ESP32-S3 Super Mini via USB-C and run:
 ```bash
 # Compile and build the binary
@@ -132,21 +111,20 @@ pio run --target upload
 pio device monitor
 ```
 
-*(Note: If the board doesn't enter bootloader mode automatically, press and hold **BOOT**, press and release **RESET**, then release **BOOT**).*
-
-### Step 3: Windows Pairing
-1. Open **Windows Settings** $\rightarrow$ **Bluetooth & devices** $\rightarrow$ **Add device**.
-2. Select **Bluetooth**.
-3. Click on **`S3 Air Mouse V1`**.
-4. Windows will pair and configure the device as a standard BLE HID mouse.
-
 ---
 
 ## 6. Quick Functional Acceptance Checklist
 
-1. **Boot Test:** Open the serial monitor at 115200 baud. You should see the startup banner, MPU6050 address `0x68`, and calibration completion.
-2. **Cursor Motion:** Rotate the board left/right (yaw) and up/down (pitch). The PC mouse cursor should move smoothly.
+1. **Boot Test:** Open the serial monitor at 115200 baud. You should see the startup banner showing Pins, active Mode 1 (`AIR_MOUSE`), MPU6050 address `0x68`, and calibration completion.
+2. **Corrected Cursor Motion:**
+   - Tilt UP $\rightarrow$ Cursor moves UP.
+   - Tilt DOWN $\rightarrow$ Cursor moves DOWN.
+   - Rotate LEFT $\rightarrow$ Cursor moves LEFT.
+   - Rotate RIGHT $\rightarrow$ Cursor moves RIGHT.
 3. **Stationary Test:** Rest the board on a flat table. The cursor should stay completely stationary with zero drift or jitter.
-4. **Left / Right Click:** Tap Button A for left click; tap Button B for right click (both respond instantly on release).
-5. **Motion Pause:** Press and hold Button A for $\ge 750\text{ ms}$. Notice the log prints `Air Mouse Paused`. Move the board—the cursor will not move. Long press Button A again to resume.
-6. **Laser Activation:** Press the button on your toy laser pointer body with your finger—it lights up directly from the 5V power rail.
+4. **Left / Right Click (Air Mouse Mode):** Tap Button A for left click; tap Button B for right click.
+5. **Motion Pause:** Press and hold Button A for $\ge 700\text{ ms}$. Cursor freezes for wrist repositioning. Long press Button A again to resume.
+6. **Mode Switching Button (GPIO 7):**
+   - **Tap Button Mode:** Switches to Mode 2 (`PRESENTATION`). LED blinks twice. Air mouse motion is paused. Button A sends Next Slide (`PAGE_DOWN`), Button B sends Previous Slide (`PAGE_UP`).
+   - **Tap Button Mode again:** Switches to Mode 3 (`REEL_SCROLLER`). LED blinks 3 times. Button A scrolls down to the next reel, Button B scrolls up to the previous reel.
+   - **Hold Button Mode ($\ge 700\text{ ms}$):** Instantly resets back to Mode 1 (`AIR_MOUSE`). LED blinks once, air mouse cursor movement reactivates immediately!

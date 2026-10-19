@@ -27,6 +27,7 @@ public:
     void printBLEStatus(bool advertising, bool connected);
     void printButtonEvent(Input::ButtonEvent event);
     void printStateTransition(SystemState oldState, SystemState newState);
+    void printOperatingMode(Config::Settings::OperatingMode mode);
     void printSensorError(uint32_t errorCount, const char* action);
 
     /**
@@ -40,8 +41,9 @@ public:
     void logMotionStream(float gx, float gy, int8_t dx, int8_t dy);
 
     /**
-     * @brief Check for incoming serial commands ('d' to toggle debug stream, 'r' to recalibrate).
-     * @return 1 for toggle debug, 2 for recalibrate, 0 for none.
+     * @brief Check for incoming serial commands:
+     *        'd' = toggle debug stream, 'r' = recalibrate, 'm' = cycle mode, 'i' = toggle invert.
+     * @return 1 for debug, 2 for recalib, 3 for mode switch, 4 for toggle invert, 0 for none.
      */
     uint8_t processSerialCommands();
 

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "../config/settings.h"
 
 namespace System {
 
@@ -20,6 +21,7 @@ enum class SystemState : uint8_t {
 };
 
 typedef void (*StateChangeCallback)(SystemState oldState, SystemState newState);
+typedef void (*ModeChangeCallback)(Config::Settings::OperatingMode oldMode, Config::Settings::OperatingMode newMode);
 
 class StateManager {
 public:
@@ -40,18 +42,31 @@ public:
     const char* getStateName(SystemState state) const;
     const char* getCurrentStateName() const { return getStateName(_currentState); }
 
+    Config::Settings::OperatingMode getOperatingMode() const { return _currentMode; }
+    Config::Settings::OperatingMode cycleOperatingMode();
+    bool setOperatingMode(Config::Settings::OperatingMode newMode);
+    const char* getOperatingModeName(Config::Settings::OperatingMode mode) const;
+    const char* getCurrentOperatingModeName() const { return getOperatingModeName(_currentMode); }
+
     bool canEmitMouseReports() const {
-        return (_currentState == SystemState::AIR_MOUSE_ACTIVE);
+        return (_currentState == SystemState::AIR_MOUSE_ACTIVE &&
+                _currentMode == Config::Settings::OperatingMode::AIR_MOUSE);
     }
 
     void setStateChangeCallback(StateChangeCallback cb) {
         _callback = cb;
     }
 
+    void setModeChangeCallback(ModeChangeCallback cb) {
+        _modeCallback = cb;
+    }
+
 private:
     SystemState _currentState;
     SystemState _previousState;
+    Config::Settings::OperatingMode _currentMode;
     StateChangeCallback _callback;
+    ModeChangeCallback _modeCallback;
 
     bool isValidTransition(SystemState from, SystemState to) const;
 };

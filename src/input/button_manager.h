@@ -15,8 +15,10 @@ enum class ButtonEvent : uint8_t {
     NONE,
     BUTTON_A_SHORT_PRESS,
     BUTTON_B_SHORT_PRESS,
+    BUTTON_MODE_SHORT_PRESS,
     BUTTON_A_LONG_PRESS,
     BUTTON_B_LONG_PRESS,
+    BUTTON_MODE_LONG_PRESS,
     SIMULTANEOUS_PRESS
 };
 
@@ -25,7 +27,8 @@ public:
     ButtonManager();
 
     void init(uint8_t pinA = Config::Pins::BUTTON_A,
-              uint8_t pinB = Config::Pins::BUTTON_B);
+              uint8_t pinB = Config::Pins::BUTTON_B,
+              uint8_t pinModeBtn = Config::Pins::BUTTON_MODE);
 
     /**
      * @brief Polling update called on every iteration of the main loop.
@@ -35,6 +38,7 @@ public:
 
     bool isButtonAPressed() const { return _btnA.isPressed; }
     bool isButtonBPressed() const { return _btnB.isPressed; }
+    bool isButtonModePressed() const { return _btnMode.isPressed; }
 
 private:
     struct ButtonState {
@@ -51,6 +55,7 @@ private:
 
     ButtonState _btnA;
     ButtonState _btnB;
+    ButtonState _btnMode;
     bool _simultaneousTriggered;
 
     void updatePhysicalButton(ButtonState& btn, uint32_t now);

@@ -49,13 +49,17 @@ public:
      */
     bool recoverBus();
 
+    /**
+     * @brief Scans all 127 I2C addresses and prints findings to Serial.
+     */
+    void scanBus();
+
     uint8_t  getDetectedAddress() const { return _detectedAddress; }
     uint8_t  getWhoAmI() const { return _whoAmI; }
     uint32_t getErrorCount() const { return _errorCount; }
     bool     isHealthy() const { return _isInitialized && (_consecutiveErrors < 3); }
 
 private:
-    // MPU6050 Register Map
     static constexpr uint8_t REG_SMPLRT_DIV   = 0x19;
     static constexpr uint8_t REG_CONFIG       = 0x1A;
     static constexpr uint8_t REG_GYRO_CONFIG  = 0x1B;

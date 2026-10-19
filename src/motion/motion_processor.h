@@ -49,11 +49,20 @@ public:
     void setDeadzone(float deadzoneDps) { _deadzone = deadzoneDps; }
     void setFilterAlpha(float alpha) { _filterAlpha = alpha; }
 
+    void setInvertX(bool invert) { _invertX = invert; }
+    void setInvertY(bool invert) { _invertY = invert; }
+    bool isInvertX() const { return _invertX; }
+    bool isInvertY() const { return _invertY; }
+    void toggleInvertX() { _invertX = !_invertX; }
+    void toggleInvertY() { _invertY = !_invertY; }
+
     float getFilteredRateX() const { return _filteredRateX; }
     float getFilteredRateY() const { return _filteredRateY; }
 
 private:
     bool  _isPaused;
+    bool  _invertX;
+    bool  _invertY;
     float _sensX;
     float _sensY;
     float _deadzone;

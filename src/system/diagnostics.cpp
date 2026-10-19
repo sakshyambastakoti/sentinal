@@ -28,9 +28,9 @@ void Diagnostics::printStartupBanner() {
     Serial.printf("Flash Size:    %u KB\n", ESP.getFlashChipSize() / 1024);
     Serial.printf("Free Heap:     %u Bytes\n", ESP.getFreeHeap());
     Serial.printf("Pins:          SDA: GPIO%u | SCL: GPIO%u\n", Config::Pins::I2C_SDA, Config::Pins::I2C_SCL);
-    Serial.printf("               Btn A: GPIO%u | Btn B: GPIO%u\n",
-                  Config::Pins::BUTTON_A, Config::Pins::BUTTON_B);
-    Serial.println("Type 'd' to toggle motion debug stream; 'r' to recalibrate.");
+    Serial.printf("               Btn A: GPIO%u | Btn B: GPIO%u | Btn Mode: GPIO%u\n",
+                  Config::Pins::BUTTON_A, Config::Pins::BUTTON_B, Config::Pins::BUTTON_MODE);
+    Serial.println("Commands:      'd' = debug stream | 'r' = calib | 'm' = switch mode | 'i' = toggle axis invert");
     Serial.println("=======================================================\n");
 }
 
@@ -48,9 +48,9 @@ void Diagnostics::printCalibrationResult(const Sensors::GyroCalibrationResult& r
     if (result.status == Sensors::CalibrationStatus::SUCCESS) {
         Serial.println("[CALIB] Gyroscope calibration successful:");
         Serial.printf("        Offsets: X=%+.2f, Y=%+.2f, Z=%+.2f deg/s\n",
-                      result.offsetX, result.offsetY, result.offsetZ);
+            result.offsetX, result.offsetY, result.offsetZ);
         Serial.printf("        StdDev:  X=%.3f, Y=%.3f, Z=%.3f deg/s\n",
-                      result.stdevX, result.stdevY, result.stdevZ);
+            result.stdevX, result.stdevY, result.stdevZ);
     } else {
         Serial.println("[CALIB] Warning: Calibration failed. Motion detected or sensor error.");
     }
@@ -61,28 +61,51 @@ void Diagnostics::printBLEStatus(bool advertising, bool connected) {
         Serial.println("[BLE] Device connected to Host PC! HID reports active.");
     } else if (advertising) {
         Serial.printf("[BLE] Advertising as '%s'. Awaiting pairing/connection...\n",
-                      Config::Settings::BLE_DEVICE_NAME);
+            Config::Settings::BLE_DEVICE_NAME);
     } else {
         Serial.println("[BLE] BLE HID stack offline or stopped.");
+    }
+}
+
+void Diagnostics::printOperatingMode(Config::Settings::OperatingMode mode) {
+    switch (mode) {
+        case Config::Settings::OperatingMode::AIR_MOUSE:
+            Serial.println("[MODE] Active: AIR_MOUSE (Mode 1: 6-Axis Desktop Air Mouse)");
+            break;
+        case Config::Settings::OperatingMode::PRESENTATION:
+            Serial.println("[MODE] Active: PRESENTATION (Mode 2: Presentation Remote Slide Clicker)");
+            break;
+        case Config::Settings::OperatingMode::REEL_SCROLLER:
+            Serial.println("[MODE] Active: REEL_SCROLLER (Mode 3: Social Reel / Shorts Scroller)");
+            break;
+        default:
+            Serial.println("[MODE] Active: UNKNOWN");
+            break;
     }
 }
 
 void Diagnostics::printButtonEvent(Input::ButtonEvent event) {
     switch (event) {
         case Input::ButtonEvent::BUTTON_A_SHORT_PRESS:
-            Serial.println("[INPUT] Button A Short Press: Left Click");
+            Serial.println("[INPUT] Button A Short Press: Action 1 (Left Click / Next Slide / Next Reel)");
             break;
         case Input::ButtonEvent::BUTTON_B_SHORT_PRESS:
-            Serial.println("[INPUT] Button B Short Press: Right Click");
+            Serial.println("[INPUT] Button B Short Press: Action 2 (Right Click / Prev Slide / Prev Reel)");
+            break;
+        case Input::ButtonEvent::BUTTON_MODE_SHORT_PRESS:
+            Serial.println("[INPUT] Button Mode Short Press: Cycle Operating Mode");
             break;
         case Input::ButtonEvent::BUTTON_A_LONG_PRESS:
-            Serial.println("[INPUT] Button A Long Press: Toggle Motion Pause/Resume");
+            Serial.println("[INPUT] Button A Long Press: Pause Mouse / Fullscreen / Play-Pause");
             break;
         case Input::ButtonEvent::BUTTON_B_LONG_PRESS:
             Serial.println("[INPUT] Button B Long Press: Trigger Gyro Recalibration");
             break;
+        case Input::ButtonEvent::BUTTON_MODE_LONG_PRESS:
+            Serial.println("[INPUT] Button Mode Long Press: Reset to Default Mode (AIR_MOUSE)");
+            break;
         case Input::ButtonEvent::SIMULTANEOUS_PRESS:
-            Serial.println("[INPUT] Simultaneous Press (Both A & B): Reserved for future mode selection");
+            Serial.println("[INPUT] Simultaneous Press (Both A & B): Alternate Mode Cycle Shortcut");
             break;
         default:
             break;
@@ -154,10 +177,16 @@ uint8_t Diagnostics::processSerialCommands() {
         } else if (ch == 'r' || ch == 'R') {
             Serial.println("[CMD] Manual Gyro Recalibration requested via USB serial.");
             return 2;
+        } else if (ch == 'm' || ch == 'M') {
+            return 3;
+        } else if (ch == 'i' || ch == 'I') {
+            return 4;
         } else if (ch == 'h' || ch == 'H') {
             Serial.println("[CMD] Available commands:");
             Serial.println("  'd' - Toggle motion telemetry stream");
             Serial.println("  'r' - Initiate stationary gyro recalibration");
+            Serial.println("  'm' - Cycle operating mode (Air Mouse -> Presentation -> Reel Scroller)");
+            Serial.println("  'i' - Toggle axis inversion (Invert X / Y)");
             Serial.println("  'h' - Display this help text");
         }
     }

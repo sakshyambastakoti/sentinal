@@ -1,6 +1,6 @@
 /**
  * @file imu_driver.cpp
- * @brief Implementation of high-reliability MPU6050 I2C driver.
+ * @brief Implementation of high-reliability MPU6050 I2C driver with bus scanner.
  */
 
 #include "imu_driver.h"
@@ -22,6 +22,23 @@ bool IMUDriver::probeAddress(uint8_t address) {
     return (Wire.endTransmission() == 0);
 }
 
+void IMUDriver::scanBus() {
+    Serial.println("[I2C_SCAN] Scanning I2C bus for responding devices...");
+    uint8_t count = 0;
+    for (uint8_t addr = 1; addr < 127; addr++) {
+        Wire.beginTransmission(addr);
+        if (Wire.endTransmission() == 0) {
+            Serial.printf("[I2C_SCAN] Device found at address 0x%02X\n", addr);
+            count++;
+        }
+    }
+    if (count == 0) {
+        Serial.println("[I2C_SCAN] No I2C devices found! Check wiring, 3.3V power, and GND.");
+    } else {
+        Serial.printf("[I2C_SCAN] Total devices found: %u\n", count);
+    }
+}
+
 bool IMUDriver::writeRegister(uint8_t reg, uint8_t value) {
     Wire.beginTransmission(_detectedAddress);
     Wire.write(reg);
@@ -39,7 +56,7 @@ bool IMUDriver::writeRegister(uint8_t reg, uint8_t value) {
 bool IMUDriver::readRegisters(uint8_t reg, uint8_t* buffer, size_t length) {
     Wire.beginTransmission(_detectedAddress);
     Wire.write(reg);
-    if (Wire.endTransmission(false) != 0) { // Repeated start
+    if (Wire.endTransmission(false) != 0) {
         _errorCount++;
         _consecutiveErrors++;
         return false;
@@ -79,7 +96,7 @@ bool IMUDriver::init(uint8_t sdaPin, uint8_t sclPin, uint32_t frequency) {
     } else if (probeAddress(Config::Settings::MPU6050_ADDR_SECONDARY)) {
         _detectedAddress = Config::Settings::MPU6050_ADDR_SECONDARY;
     } else {
-        // Neither address responded; attempt bus recovery and retry once
+        // Neither address responded; attempt bus recovery and scan
         recoverBus();
         Wire.begin(_sdaPin, _sclPin, _frequency);
         if (probeAddress(Config::Settings::MPU6050_ADDR_PRIMARY)) {
@@ -87,6 +104,7 @@ bool IMUDriver::init(uint8_t sdaPin, uint8_t sclPin, uint32_t frequency) {
         } else if (probeAddress(Config::Settings::MPU6050_ADDR_SECONDARY)) {
             _detectedAddress = Config::Settings::MPU6050_ADDR_SECONDARY;
         } else {
+            scanBus();
             return false;
         }
     }
@@ -103,34 +121,32 @@ bool IMUDriver::init(uint8_t sdaPin, uint8_t sclPin, uint32_t frequency) {
     delay(100);
 
     // Wake device from sleep and select PLL with X-axis gyroscope clock source
-    // (Recommended by InvenSense for optimal clock stability over internal 8MHz RC)
     if (!writeRegister(REG_PWR_MGMT_1, 0x01)) {
         return false;
     }
     delay(15);
 
-    // Enable all 6 axes (Accel X/Y/Z and Gyro X/Y/Z)
+    // Enable all 6 axes
     if (!writeRegister(REG_PWR_MGMT_2, 0x00)) {
         return false;
     }
 
     // Configure Digital Low Pass Filter (DLPF)
-    // 0x02 = ~98Hz bandwidth, 2.8ms delay (great trade-off between anti-aliasing and responsiveness)
     if (!writeRegister(REG_CONFIG, Config::Settings::MPU6050_DLPF_CONFIG)) {
         return false;
     }
 
-    // Set sample rate divider (1 kHz / (1 + 0) = 1 kHz internal sampling rate)
+    // Set sample rate divider (1 kHz)
     if (!writeRegister(REG_SMPLRT_DIV, 0x00)) {
         return false;
     }
 
-    // Set Gyroscope Full Scale Range to +/- 250 deg/s (FS_SEL = 0)
+    // Set Gyroscope Full Scale Range to +/- 250 deg/s
     if (!writeRegister(REG_GYRO_CONFIG, 0x00)) {
         return false;
     }
 
-    // Set Accelerometer Full Scale Range to +/- 2g (AFS_SEL = 0)
+    // Set Accelerometer Full Scale Range to +/- 2g
     if (!writeRegister(REG_ACCEL_CONFIG, 0x00)) {
         return false;
     }
@@ -149,7 +165,6 @@ bool IMUDriver::readSensor(IMUData& data) {
 
     uint8_t rawBuffer[14];
     if (!readRegisters(REG_ACCEL_XOUT_H, rawBuffer, 14)) {
-        // If 3 consecutive errors occur, attempt recovery
         if (_consecutiveErrors >= 3) {
             recoverBus();
             Wire.begin(_sdaPin, _sclPin, _frequency);
@@ -157,25 +172,20 @@ bool IMUDriver::readSensor(IMUData& data) {
         return false;
     }
 
-    // Parse Accelerometer data (big-endian 16-bit signed)
     int16_t rawAccelX = static_cast<int16_t>((rawBuffer[0] << 8) | rawBuffer[1]);
     int16_t rawAccelY = static_cast<int16_t>((rawBuffer[2] << 8) | rawBuffer[3]);
     int16_t rawAccelZ = static_cast<int16_t>((rawBuffer[4] << 8) | rawBuffer[5]);
 
-    // Parse Temperature (big-endian 16-bit signed)
     int16_t rawTemp = static_cast<int16_t>((rawBuffer[6] << 8) | rawBuffer[7]);
 
-    // Parse Gyroscope data (big-endian 16-bit signed)
     int16_t rawGyroX = static_cast<int16_t>((rawBuffer[8] << 8) | rawBuffer[9]);
     int16_t rawGyroY = static_cast<int16_t>((rawBuffer[10] << 8) | rawBuffer[11]);
     int16_t rawGyroZ = static_cast<int16_t>((rawBuffer[12] << 8) | rawBuffer[13]);
 
-    // Convert to engineering units
     data.accelX = static_cast<float>(rawAccelX) / Config::Settings::ACCEL_SCALE_2G;
     data.accelY = static_cast<float>(rawAccelY) / Config::Settings::ACCEL_SCALE_2G;
     data.accelZ = static_cast<float>(rawAccelZ) / Config::Settings::ACCEL_SCALE_2G;
 
-    // Formula from InvenSense MPU6050 datasheet: Temperature in °C = (TEMP_OUT / 340) + 36.53
     data.temperature = (static_cast<float>(rawTemp) / 340.0f) + 36.53f;
 
     data.gyroX = static_cast<float>(rawGyroX) / Config::Settings::GYRO_SCALE_250DPS;
@@ -187,26 +197,22 @@ bool IMUDriver::readSensor(IMUData& data) {
 }
 
 bool IMUDriver::recoverBus() {
-    // Release I2C hardware control
     Wire.end();
 
     pinMode(_sdaPin, INPUT_PULLUP);
     pinMode(_sclPin, OUTPUT_OPEN_DRAIN);
 
-    // Toggle SCL clock line up to 16 times to flush hung slave state machines
     for (int i = 0; i < 16; ++i) {
         digitalWrite(_sclPin, LOW);
         delayMicroseconds(5);
         digitalWrite(_sclPin, HIGH);
         delayMicroseconds(5);
 
-        // Check if slave released SDA
         if (digitalRead(_sdaPin) == HIGH) {
             break;
         }
     }
 
-    // Generate STOP condition: SDA transitions from LOW to HIGH while SCL is HIGH
     pinMode(_sdaPin, OUTPUT_OPEN_DRAIN);
     digitalWrite(_sdaPin, LOW);
     delayMicroseconds(5);

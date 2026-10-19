@@ -38,7 +38,58 @@ static uint32_t s_lastMotionCalcMs = 0;
 static uint32_t s_sensorErrorCount = 0;
 
 // =============================================================================
-// State Machine and Connection Callbacks
+// Mode LED Feedback Helper (Non-blocking)
+// =============================================================================
+static uint8_t  s_ledBlinksRemaining = 0;
+static uint32_t s_lastLedToggleMs    = 0;
+static bool     s_ledState           = false;
+
+static void triggerModeLEDs(Config::Settings::OperatingMode mode) {
+    // Mode 0 (Air Mouse): 1 flash (2 toggles)
+    // Mode 1 (Presentation): 2 flashes (4 toggles)
+    // Mode 2 (Reel Scroller): 3 flashes (6 toggles)
+    uint8_t count = static_cast<uint8_t>(mode) + 1;
+    s_ledBlinksRemaining = count * 2;
+    s_lastLedToggleMs = millis();
+    s_ledState = true;
+    digitalWrite(Config::Pins::MODE_LED, HIGH);
+    digitalWrite(Config::Pins::ONBOARD_LED, LOW); // Active-LOW on ESP32-S3 Super Mini
+}
+
+static void updateLEDs(uint32_t now) {
+    if (s_ledBlinksRemaining > 0) {
+        if ((now - s_lastLedToggleMs) >= 120) {
+            s_lastLedToggleMs = now;
+            s_ledState = !s_ledState;
+            digitalWrite(Config::Pins::MODE_LED, s_ledState ? HIGH : LOW);
+            digitalWrite(Config::Pins::ONBOARD_LED, s_ledState ? LOW : HIGH);
+            s_ledBlinksRemaining--;
+            if (s_ledBlinksRemaining == 0) {
+                digitalWrite(Config::Pins::MODE_LED, LOW);
+                digitalWrite(Config::Pins::ONBOARD_LED, HIGH); // Off
+            }
+        }
+    }
+}
+
+static void cycleDeviceMode() {
+    Config::Settings::OperatingMode newMode = s_stateManager.cycleOperatingMode();
+    Serial.printf("\n[MODE] Operating Mode switched to: %s\n", s_stateManager.getCurrentOperatingModeName());
+    s_bleMouse.releaseAll();
+    s_motionProcessor.reset();
+    triggerModeLEDs(newMode);
+}
+
+static void resetDeviceMode() {
+    s_stateManager.setOperatingMode(Config::Settings::OperatingMode::AIR_MOUSE);
+    Serial.printf("\n[MODE] Operating Mode reset to default: %s\n", s_stateManager.getCurrentOperatingModeName());
+    s_bleMouse.releaseAll();
+    s_motionProcessor.reset();
+    triggerModeLEDs(Config::Settings::OperatingMode::AIR_MOUSE);
+}
+
+// =============================================================================
+// State Machine, Mode and Connection Callbacks
 // =============================================================================
 static void handleStateChange(System::SystemState oldState, System::SystemState newState) {
     s_diagnostics.printStateTransition(oldState, newState);
@@ -47,11 +98,26 @@ static void handleStateChange(System::SystemState oldState, System::SystemState 
         s_motionProcessor.setPaused(true);
         s_bleMouse.releaseAll();
     } else if (newState == System::SystemState::AIR_MOUSE_ACTIVE) {
-        s_motionProcessor.setPaused(false);
+        if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::AIR_MOUSE) {
+            s_motionProcessor.setPaused(false);
+        }
     } else if (newState == System::SystemState::BLE_DISCONNECTED ||
                newState == System::SystemState::SENSOR_ERROR) {
         s_bleMouse.releaseAll();
         s_motionProcessor.reset();
+    }
+}
+
+static void handleModeChange(Config::Settings::OperatingMode oldMode, Config::Settings::OperatingMode newMode) {
+    s_diagnostics.printOperatingMode(newMode);
+    s_bleMouse.releaseAll();
+    s_motionProcessor.reset();
+    if (newMode == Config::Settings::OperatingMode::AIR_MOUSE) {
+        if (s_stateManager.getState() == System::SystemState::AIR_MOUSE_ACTIVE) {
+            s_motionProcessor.setPaused(false);
+        }
+    } else {
+        s_motionProcessor.setPaused(true);
     }
 }
 
@@ -99,18 +165,26 @@ static void performRecalibration() {
 // Setup
 // =============================================================================
 void setup() {
-    // 1. Initialize USB CDC serial diagnostics
+    // 1. Initialize indicator LEDs
+    pinMode(Config::Pins::MODE_LED, OUTPUT);
+    digitalWrite(Config::Pins::MODE_LED, LOW);
+    pinMode(Config::Pins::ONBOARD_LED, OUTPUT);
+    digitalWrite(Config::Pins::ONBOARD_LED, HIGH); // Active-LOW: set HIGH to turn OFF
+
+    // 2. Initialize USB CDC serial diagnostics
     s_diagnostics.init(Config::Settings::SERIAL_BAUD_RATE);
     s_diagnostics.printStartupBanner();
 
-    // 2. Initialize state manager and attach transition observer
+    // 3. Initialize state manager and attach transition/mode observers
     s_stateManager.init();
     s_stateManager.setStateChangeCallback(handleStateChange);
+    s_stateManager.setModeChangeCallback(handleModeChange);
 
-    // 3. Initialize physical push buttons
-    s_buttonManager.init(Config::Pins::BUTTON_A, Config::Pins::BUTTON_B);
+    // 4. Initialize physical push buttons (Button A, Button B, Button Mode)
+    s_buttonManager.init(Config::Pins::BUTTON_A, Config::Pins::BUTTON_B, Config::Pins::BUTTON_MODE);
+    triggerModeLEDs(s_stateManager.getOperatingMode());
 
-    // 4. Initialize I2C Bus and MPU6050 Motion Sensor
+    // 5. Initialize I2C Bus and MPU6050 Motion Sensor
     Serial.println("[INIT] Initializing I2C bus and MPU6050...");
     if (!s_imuDriver.init(Config::Pins::I2C_SDA, Config::Pins::I2C_SCL, Config::Settings::I2C_CLOCK_SPEED_HZ)) {
         s_sensorErrorCount++;
@@ -148,11 +222,24 @@ void loop() {
     uint32_t now = millis();
 
     // -------------------------------------------------------------------------
-    // 1. Process USB Serial Diagnostic Commands ('d' = toggle debug, 'r' = calib)
+    // 0. Update Non-Blocking Mode Indicator LEDs
+    // -------------------------------------------------------------------------
+    updateLEDs(now);
+
+    // -------------------------------------------------------------------------
+    // 1. Process USB Serial Diagnostic Commands ('d', 'r', 'm', 'i')
     // -------------------------------------------------------------------------
     uint8_t cmd = s_diagnostics.processSerialCommands();
     if (cmd == 2) {
         performRecalibration();
+    } else if (cmd == 3) {
+        cycleDeviceMode();
+    } else if (cmd == 4) {
+        s_motionProcessor.toggleInvertX();
+        s_motionProcessor.toggleInvertY();
+        Serial.printf("[CMD] Invert X: %s | Invert Y: %s\n",
+                      s_motionProcessor.isInvertX() ? "TRUE" : "FALSE",
+                      s_motionProcessor.isInvertY() ? "TRUE" : "FALSE");
     }
 
     // -------------------------------------------------------------------------
@@ -164,37 +251,88 @@ void loop() {
 
         switch (event) {
             case Input::ButtonEvent::BUTTON_A_SHORT_PRESS:
-                // Left Click
-                if (s_bleMouse.isConnected()) {
-                    s_bleMouse.click(Connectivity::MOUSE_LEFT);
+                if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::AIR_MOUSE) {
+                    // Air Mouse: Left Click
+                    if (s_bleMouse.isConnected()) {
+                        s_bleMouse.click(Connectivity::MOUSE_LEFT);
+                    }
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
+                    // Presentation: Next Slide (PAGE_DOWN)
+                    if (s_bleMouse.isConnected()) {
+                        Serial.println("[ACTION] Presentation -> Next Slide (PAGE_DOWN)");
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_PAGE_DOWN);
+                    }
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
+                    // Reel Scroller: Next Reel (Mouse Wheel Down + Down Arrow)
+                    if (s_bleMouse.isConnected()) {
+                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Scroll Down)");
+                        s_bleMouse.scroll(-4);
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
+                    }
                 }
                 break;
 
             case Input::ButtonEvent::BUTTON_B_SHORT_PRESS:
-                // Right Click (instant on release)
-                if (s_bleMouse.isConnected()) {
-                    s_bleMouse.click(Connectivity::MOUSE_RIGHT);
+                if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::AIR_MOUSE) {
+                    // Air Mouse: Right Click (instant on release)
+                    if (s_bleMouse.isConnected()) {
+                        s_bleMouse.click(Connectivity::MOUSE_RIGHT);
+                    }
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
+                    // Presentation: Previous Slide (PAGE_UP)
+                    if (s_bleMouse.isConnected()) {
+                        Serial.println("[ACTION] Presentation -> Previous Slide (PAGE_UP)");
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_PAGE_UP);
+                    }
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
+                    // Reel Scroller: Previous Reel (Mouse Wheel Up + Up Arrow)
+                    if (s_bleMouse.isConnected()) {
+                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Scroll Up)");
+                        s_bleMouse.scroll(4);
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_UP_ARROW);
+                    }
                 }
                 break;
 
             case Input::ButtonEvent::BUTTON_A_LONG_PRESS:
-                // Toggle Motion Pause / Resume
-                if (s_stateManager.getState() == System::SystemState::AIR_MOUSE_ACTIVE) {
-                    s_stateManager.transitionTo(System::SystemState::AIR_MOUSE_PAUSED);
-                    Serial.println("[APP] Air Mouse Paused (re-center mouse without moving cursor).");
-                } else if (s_stateManager.getState() == System::SystemState::AIR_MOUSE_PAUSED) {
-                    s_stateManager.transitionTo(System::SystemState::AIR_MOUSE_ACTIVE);
-                    Serial.println("[APP] Air Mouse Resumed.");
+                if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::AIR_MOUSE) {
+                    // Air Mouse: Toggle Motion Pause / Resume
+                    if (s_stateManager.getState() == System::SystemState::AIR_MOUSE_ACTIVE) {
+                        s_stateManager.transitionTo(System::SystemState::AIR_MOUSE_PAUSED);
+                        Serial.println("[APP] Air Mouse Paused (re-center mouse without moving cursor).");
+                    } else if (s_stateManager.getState() == System::SystemState::AIR_MOUSE_PAUSED) {
+                        s_stateManager.transitionTo(System::SystemState::AIR_MOUSE_ACTIVE);
+                        Serial.println("[APP] Air Mouse Resumed.");
+                    }
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
+                    // Presentation: Start / Resume Fullscreen Slideshow (F5)
+                    if (s_bleMouse.isConnected()) {
+                        Serial.println("[ACTION] Presentation -> Start / Resume Slideshow (F5)");
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_F5);
+                    }
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
+                    // Reel Scroller: Play / Pause Video (Spacebar)
+                    if (s_bleMouse.isConnected()) {
+                        Serial.println("[ACTION] Reel Scroller -> Play / Pause (Spacebar)");
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_SPACE);
+                    }
                 }
                 break;
 
             case Input::ButtonEvent::BUTTON_B_LONG_PRESS:
-                // Trigger Stationary Recalibration
+                // Stationary Gyro Recalibration across all modes
                 performRecalibration();
                 break;
 
+            case Input::ButtonEvent::BUTTON_MODE_SHORT_PRESS:
             case Input::ButtonEvent::SIMULTANEOUS_PRESS:
-                // Chorded press: reserved for V2 Mode Switching
+                // Dedicated Mode Switch Button tap (or A+B simultaneous): Cycle Mode
+                cycleDeviceMode();
+                break;
+
+            case Input::ButtonEvent::BUTTON_MODE_LONG_PRESS:
+                // Dedicated Mode Switch Button hold: Reset directly to Air Mouse Mode
+                resetDeviceMode();
                 break;
 
             default:

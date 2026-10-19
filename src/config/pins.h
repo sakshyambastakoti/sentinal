@@ -1,20 +1,10 @@
 /**
  * @file pins.h
- * @brief Centralized Hardware Pin Definitions for ESP32-S3 Super Mini Air Mouse V1.
+ * @brief Centralized Hardware Pin Definitions for ESP32-S3FH4R2 Super Mini 3-in-1 Controller.
  *
- * ESP32-S3 Super Mini Board Pinout Verification Notes:
- * - Left Header (top to bottom with USB-C facing up):
- *     3V3, GND, GPIO1, GPIO2, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7
- * - Right Header (top to bottom with USB-C facing up):
- *     5V, GND, GPIO8, GPIO9, GPIO10, GPIO11, GPIO12, GPIO13, GPIO43(TX), GPIO44(RX)
- *
- * Reserved / Dedicated Pins Avoided:
- * - GPIO0: Boot strapping pin (must not be held LOW during reset).
- * - GPIO3: Frequently connected to onboard USB VBUS voltage divider on Super Mini boards.
- * - GPIO19/20: Native USB D-/D+ used for Hardware CDC serial programming and debugging.
- * - GPIO26-32: Internal SPI Flash / PSRAM interconnects (fatal if toggled externally).
- * - GPIO43/44: UART0 TX / RX (reserved for external hardware serial debugging if needed).
- * - GPIO45/46: Strapping pins for VDD_SPI and boot ROM messages.
+ * Board: ESP32-S3FH4R2 Super Mini (4MB Flash + 2MB PSRAM)
+ * Left Header:  5V/VBUS, GND, 3V3, GPIO1, GPIO2, GPIO8, GPIO9
+ * Right Header: GPIO7, GPIO6, GPIO5, GPIO4, GPIO3, GPIO10, GPIO11
  */
 
 #pragma once
@@ -27,28 +17,33 @@ namespace Pins {
     // =========================================================================
     // I2C Bus Pins (MPU6050 6-Axis Motion Sensor)
     // =========================================================================
-    // Standard hardware I2C peripheral pins on the right header.
-    constexpr uint8_t I2C_SDA = 8;
-    constexpr uint8_t I2C_SCL = 9;
+    constexpr uint8_t I2C_SDA = 1; // Left Header, Pin 4 (directly below 3V3)
+    constexpr uint8_t I2C_SCL = 2; // Left Header, Pin 5 (directly below GPIO 1)
 
     // =========================================================================
     // User Push Buttons (Momentary, Normally Open, Active-LOW)
     // =========================================================================
-    // Connected between GPIO and GND. Configured with internal pull-up (INPUT_PULLUP).
-    // Button A: Short Press -> Left Click; Long Press -> Pause/Resume Motion.
-    // Button B: Short Press -> Right Click; Long Press -> Gyro Recalibration.
-    constexpr uint8_t BUTTON_A = 5;
-    constexpr uint8_t BUTTON_B = 6;
+    // All buttons connect between the GPIO pin and GND.
+    // Configured with internal pull-up (INPUT_PULLUP).
+    constexpr uint8_t BUTTON_A    = 5; // Right Header, Pin 3 (Left-Click / Next Slide / Next Reel)
+    constexpr uint8_t BUTTON_B    = 6; // Right Header, Pin 2 (Right-Click / Prev Slide / Prev Reel)
+    constexpr uint8_t BUTTON_MODE = 7; // Right Header, Pin 1 (Dedicated Mode Switch Button)
 
     // =========================================================================
-    // Expansion Pins
+    // Mode Indicator LEDs
     // =========================================================================
-    constexpr uint8_t EXPANSION_GPIO7 = 7; // Available general GPIO (free expansion)
+    // External LED: Connect positive (anode) to GPIO4 via a 220-330 ohm resistor, negative (cathode) to GND.
+    constexpr uint8_t MODE_LED    = 4;  // Right Header, Pin 4 (External Mode Indicator LED)
+    constexpr uint8_t ONBOARD_LED = 48; // ESP32-S3 Super Mini Onboard Indicator LED
 
     // =========================================================================
-    // Onboard Status LED (Optional visual indicator)
+    // Free Expansion Pins
     // =========================================================================
-    constexpr uint8_t ONBOARD_LED = 48;
+    constexpr uint8_t EXPANSION_GPIO8  = 8;
+    constexpr uint8_t EXPANSION_GPIO9  = 9;
+    constexpr uint8_t EXPANSION_GPIO3  = 3;
+    constexpr uint8_t EXPANSION_GPIO10 = 10;
+    constexpr uint8_t EXPANSION_GPIO11 = 11;
 
 } // namespace Pins
 } // namespace Config

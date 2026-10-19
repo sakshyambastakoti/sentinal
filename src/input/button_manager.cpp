@@ -11,14 +11,17 @@ ButtonManager::ButtonManager()
     : _simultaneousTriggered(false) {
     memset(&_btnA, 0, sizeof(_btnA));
     memset(&_btnB, 0, sizeof(_btnB));
+    memset(&_btnMode, 0, sizeof(_btnMode));
 }
 
-void ButtonManager::init(uint8_t pinA, uint8_t pinB) {
+void ButtonManager::init(uint8_t pinA, uint8_t pinB, uint8_t pinModeBtn) {
     _btnA.pin = pinA;
     _btnB.pin = pinB;
+    _btnMode.pin = pinModeBtn;
 
     pinMode(_btnA.pin, INPUT_PULLUP);
     pinMode(_btnB.pin, INPUT_PULLUP);
+    pinMode(_btnMode.pin, INPUT_PULLUP);
 
     _btnA.rawState = digitalRead(_btnA.pin);
     _btnA.lastRawState = _btnA.rawState;
@@ -27,6 +30,10 @@ void ButtonManager::init(uint8_t pinA, uint8_t pinB) {
     _btnB.rawState = digitalRead(_btnB.pin);
     _btnB.lastRawState = _btnB.rawState;
     _btnB.isPressed = (_btnB.rawState == LOW);
+
+    _btnMode.rawState = digitalRead(_btnMode.pin);
+    _btnMode.lastRawState = _btnMode.rawState;
+    _btnMode.isPressed = (_btnMode.rawState == LOW);
 }
 
 void ButtonManager::updatePhysicalButton(ButtonState& btn, uint32_t now) {
@@ -55,6 +62,7 @@ ButtonEvent ButtonManager::update() {
 
     updatePhysicalButton(_btnA, now);
     updatePhysicalButton(_btnB, now);
+    updatePhysicalButton(_btnMode, now);
 
     // -------------------------------------------------------------------------
     // 1. Simultaneous / Chorded Press Detection
@@ -122,6 +130,33 @@ ButtonEvent ButtonManager::update() {
 
             if (!wasChorded && !wasLong && holdDuration < Config::Settings::BUTTON_LONG_PRESS_MS) {
                 return ButtonEvent::BUTTON_B_SHORT_PRESS;
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Button Mode Processing (Mode Switch / Mode Reset)
+    // -------------------------------------------------------------------------
+    if (_btnMode.isPressed) {
+        if (!_btnMode.chorded && !_btnMode.longPressTriggered) {
+            if ((now - _btnMode.pressStartTime) >= Config::Settings::BUTTON_LONG_PRESS_MS) {
+                _btnMode.longPressTriggered = true;
+                return ButtonEvent::BUTTON_MODE_LONG_PRESS;
+            }
+        }
+    } else {
+        // Just released
+        if (_btnMode.pressStartTime > 0) {
+            uint32_t holdDuration = _btnMode.lastReleaseTime - _btnMode.pressStartTime;
+            bool wasChorded = _btnMode.chorded;
+            bool wasLong = _btnMode.longPressTriggered;
+
+            _btnMode.pressStartTime = 0;
+            _btnMode.chorded = false;
+            _btnMode.longPressTriggered = false;
+
+            if (!wasChorded && !wasLong && holdDuration < Config::Settings::BUTTON_LONG_PRESS_MS) {
+                return ButtonEvent::BUTTON_MODE_SHORT_PRESS;
             }
         }
     }

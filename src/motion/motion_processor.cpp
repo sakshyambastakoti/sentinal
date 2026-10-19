@@ -10,6 +10,8 @@ namespace Motion {
 
 MotionProcessor::MotionProcessor()
     : _isPaused(false),
+      _invertX(Config::Settings::INVERT_X),
+      _invertY(Config::Settings::INVERT_Y),
       _sensX(Config::Settings::SENSITIVITY_X),
       _sensY(Config::Settings::SENSITIVITY_Y),
       _deadzone(Config::Settings::GYRO_DEADZONE_DPS),
@@ -70,7 +72,7 @@ MouseDisplacement MotionProcessor::process(float gx, float gy, float gz, float d
         case Config::Settings::AXIS_Y: rawRateX = gy; break;
         case Config::Settings::AXIS_Z: rawRateX = gz; break;
     }
-    if (Config::Settings::INVERT_X) {
+    if (_invertX) {
         rawRateX = -rawRateX;
     }
 
@@ -80,7 +82,7 @@ MouseDisplacement MotionProcessor::process(float gx, float gy, float gz, float d
         case Config::Settings::AXIS_Y: rawRateY = gy; break;
         case Config::Settings::AXIS_Z: rawRateY = gz; break;
     }
-    if (Config::Settings::INVERT_Y) {
+    if (_invertY) {
         rawRateY = -rawRateY;
     }
 
