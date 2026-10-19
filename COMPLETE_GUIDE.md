@@ -128,3 +128,28 @@ pio device monitor
    - **Tap Button Mode:** Switches to Mode 2 (`PRESENTATION`). LED blinks twice. Air mouse motion is paused. Button A sends Next Slide (`PAGE_DOWN`), Button B sends Previous Slide (`PAGE_UP`).
    - **Tap Button Mode again:** Switches to Mode 3 (`REEL_SCROLLER`). LED blinks 3 times. Button A scrolls down to the next reel, Button B scrolls up to the previous reel.
    - **Hold Button Mode ($\ge 700\text{ ms}$):** Instantly resets back to Mode 1 (`AIR_MOUSE`). LED blinks once, air mouse cursor movement reactivates immediately!
+
+---
+
+## 7. iPhone / iOS Reel Scroller Setup (Mandatory Apple Settings)
+
+Unlike PCs and Macs (which naturally accept keyboard arrow keys or mouse wheels to change videos in web browsers), **Apple iOS strictly blocks Bluetooth HID devices from performing touch drag/swipe gestures unless AssistiveTouch is enabled**.
+
+All commercial Bluetooth TikTok/Reels scroller rings (D01, E-Ring, etc.) require this 1-minute setup:
+
+### Step-by-Step iPhone Configuration:
+1. **Enable AssistiveTouch:**
+   - Open iPhone **Settings** $\rightarrow$ **Accessibility** $\rightarrow$ **Touch** $\rightarrow$ **AssistiveTouch**.
+   - Toggle **AssistiveTouch** to **ON** (a small circular floating button will appear on your screen).
+2. **Verify Touch Gestures:**
+   - In that same AssistiveTouch menu, make sure **Perform Touch Gestures** is **ON**.
+3. **Adjust Tracking Sensitivity:**
+   - Scroll down to the **Tracking Sensitivity** slider in the same menu.
+   - Adjust the turtle-to-rabbit slider to approximately **25% – 35%** (about 1/3 speed). *If set too high or too low, iOS may misinterpret single-reel pagination.*
+4. **Positioning the Cursor:**
+   - In **Mode 1 (Air Mouse)**, tilt the device so the circular pointer sits roughly in the **middle** of your iPhone screen (not pinned at the very top or bottom status bar).
+   - Tap **Button Mode** twice to enter **Mode 3 (`REEL_SCROLLER`)** (LED blinks 3 times).
+   - Open **Instagram Reels**, **TikTok**, or **YouTube Shorts**.
+   - **Tap Button A:** Instantly flings to the **Next Reel**.
+   - **Tap Button B:** Instantly flings to the **Previous Reel**.
+   - **Hold Button A ($\ge 700\text{ ms}$):** Double-taps the screen to **Heart / Like** the reel!

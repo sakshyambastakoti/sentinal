@@ -263,10 +263,12 @@ void loop() {
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_PAGE_DOWN);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Next Reel (Mouse Wheel Down + Down Arrow)
+                    // Reel Scroller: Next Reel (Touch swipe up for mobile apps + wheel + arrow key)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Scroll Down)");
-                        s_bleMouse.scroll(-4);
+                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Swipe Up + Wheel + Down Arrow)");
+                        s_bleMouse.swipeUp(360);
+                        delay(40);
+                        s_bleMouse.scroll(-3);
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
                     }
                 }
@@ -285,10 +287,12 @@ void loop() {
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_PAGE_UP);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Previous Reel (Mouse Wheel Up + Up Arrow)
+                    // Reel Scroller: Previous Reel (Touch swipe down for mobile apps + wheel + arrow key)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Scroll Up)");
-                        s_bleMouse.scroll(4);
+                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Swipe Down + Wheel + Up Arrow)");
+                        s_bleMouse.swipeDown(360);
+                        delay(40);
+                        s_bleMouse.scroll(3);
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_UP_ARROW);
                     }
                 }
@@ -311,9 +315,12 @@ void loop() {
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_F5);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Play / Pause Video (Spacebar)
+                    // Reel Scroller: Double Tap to Like on Mobile + Space to Play/Pause on PC
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Play / Pause (Spacebar)");
+                        Serial.println("[ACTION] Reel Scroller -> Like / Heart (Double Tap) + Play/Pause (Space)");
+                        s_bleMouse.click(Connectivity::MOUSE_LEFT);
+                        delay(60);
+                        s_bleMouse.click(Connectivity::MOUSE_LEFT);
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_SPACE);
                     }
                 }

@@ -100,11 +100,10 @@ void BLEMouse::begin(const char* deviceName, const char* manufacturer) {
     NimBLEDevice::init(deviceName);
 
     // =========================================================================
-    // Windows 10/11 HID Security & Bonding Configuration
+    // Universal BLE HID Security & Bonding Configuration (PC & Smartphone)
     // =========================================================================
-    // Windows strictly enforces encryption and LE Secure Connections (SC) for HID devices.
-    // 1. Bonding = true, MITM = false (Just Works, no PIN required), SC = true (Secure Connections)
-    NimBLEDevice::setSecurityAuth(true, false, true);
+    // Standard Just Works bonding enables compatibility with Android, iOS, Windows, Mac.
+    NimBLEDevice::setSecurityAuth(true, false, false);
 
     // 2. IO Capability: No Input, No Output (standard for mouse/pointer devices)
     NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
@@ -130,11 +129,12 @@ void BLEMouse::begin(const char* deviceName, const char* manufacturer) {
     _pHid->startServices();
 
     // =========================================================================
-    // BLE Advertising Configuration for Windows Host Discovery
+    // BLE Advertising Configuration (Universal Discovery)
     // =========================================================================
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
-    pAdvertising->setAppearance(Config::Settings::BLE_APPEARANCE); // Generic HID
+    pAdvertising->setAppearance(Config::Settings::BLE_APPEARANCE); // HID Mouse (0x03C2)
     pAdvertising->addServiceUUID(_pHid->hidService()->getUUID()); // 0x1812 (HID Service)
+    pAdvertising->addServiceUUID(NimBLEUUID((uint16_t)0x180F));   // 0x180F (Battery Service)
     pAdvertising->setScanResponse(true);
     pAdvertising->start();
 }
@@ -166,8 +166,8 @@ void BLEMouse::onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
     _currentButtons = 0;
     _lastReportedButtons = 0;
 
-    // Negotiate low-latency HID connection parameters (7.5ms to 15ms interval, 0 latency, 2s timeout)
-    pServer->updateConnParams(desc->conn_handle, 6, 12, 0, 200);
+    // Negotiate connection parameters compliant with Apple iOS, Android, and Windows (15ms - 30ms)
+    pServer->updateConnParams(desc->conn_handle, 12, 24, 0, 200);
 
     if (_connectionCallback) {
         _connectionCallback(true);
@@ -175,12 +175,9 @@ void BLEMouse::onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
 }
 
 void BLEMouse::onAuthenticationComplete(ble_gap_conn_desc* desc) {
-    if (!desc->sec_state.encrypted) {
-        // If host refused encryption, disconnect and restart advertising
-        if (_pServer) {
-            _pServer->disconnect(desc->conn_handle);
-        }
-    }
+    // Log authentication state without forcefully disconnecting smartphone
+    Serial.printf("[BLE] Auth complete: encrypted=%d, authenticated=%d, bonded=%d\n",
+                  desc->sec_state.encrypted, desc->sec_state.authenticated, desc->sec_state.bonded);
 }
 
 void BLEMouse::onDisconnect(NimBLEServer* pServer) {
@@ -241,6 +238,73 @@ void BLEMouse::click(uint8_t button) {
 
 void BLEMouse::scroll(int8_t wheel) {
     sendReport(_currentButtons, 0, 0, wheel);
+    sendReport(_currentButtons, 0, 0, 0); // Crucial: Immediately reset relative wheel delta to 0
+}
+
+void BLEMouse::swipeUp(int16_t distance) {
+    if (!_isConnected || _pInputReport == nullptr) return;
+
+    // 1. Touch Down (Left click at current pointer position)
+    press(MOUSE_LEFT);
+    delay(20);
+
+    // 2. Drag Up in rapid steps (natural finger fling)
+    int16_t remaining = distance;
+    while (remaining > 0) {
+        int8_t step = (remaining > 60) ? -60 : -static_cast<int8_t>(remaining);
+        move(0, step);
+        remaining += step; // step is negative
+        delay(8);
+    }
+    delay(20);
+
+    // 3. Touch Up (Release left click to commit fling)
+    release(MOUSE_LEFT);
+
+    // 4. Critical commit pause: allows iOS/Android touch inertia recognizer to start deceleration
+    delay(100);
+
+    // 5. Return pointer smoothly back down without holding button so cursor stays centered
+    remaining = distance;
+    while (remaining > 0) {
+        int8_t step = (remaining > 60) ? 60 : static_cast<int8_t>(remaining);
+        move(0, step);
+        remaining -= step;
+        delay(8);
+    }
+}
+
+void BLEMouse::swipeDown(int16_t distance) {
+    if (!_isConnected || _pInputReport == nullptr) return;
+
+    // 1. Touch Down (Left click at current pointer position)
+    press(MOUSE_LEFT);
+    delay(20);
+
+    // 2. Drag Down in rapid steps (natural finger fling)
+    int16_t remaining = distance;
+    while (remaining > 0) {
+        int8_t step = (remaining > 60) ? 60 : static_cast<int8_t>(remaining);
+        move(0, step);
+        remaining -= step;
+        delay(8);
+    }
+    delay(20);
+
+    // 3. Touch Up (Release left click to commit fling)
+    release(MOUSE_LEFT);
+
+    // 4. Critical commit pause: allows iOS/Android touch inertia recognizer to start deceleration
+    delay(100);
+
+    // 5. Return pointer smoothly back up without holding button so cursor stays centered
+    remaining = distance;
+    while (remaining > 0) {
+        int8_t step = (remaining > 60) ? 60 : static_cast<int8_t>(remaining);
+        move(0, -step);
+        remaining -= step;
+        delay(8);
+    }
 }
 
 void BLEMouse::sendKey(uint8_t keycode, uint8_t modifier) {

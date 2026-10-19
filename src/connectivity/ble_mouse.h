@@ -76,6 +76,16 @@ public:
     void scroll(int8_t wheel);
 
     /**
+     * @brief Emulate a natural touch swipe up (scroll down to next reel) and return cursor.
+     */
+    void swipeUp(int16_t distance = 360);
+
+    /**
+     * @brief Emulate a natural touch swipe down (scroll up to previous reel) and return cursor.
+     */
+    void swipeDown(int16_t distance = 360);
+
+    /**
      * @brief Press a mouse button.
      */
     void press(uint8_t button);

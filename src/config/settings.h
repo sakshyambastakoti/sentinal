@@ -31,7 +31,7 @@ namespace Settings {
     // =========================================================================
     constexpr const char* BLE_DEVICE_NAME  = "S3 Air Controller";
     constexpr const char* BLE_MANUFACTURER = "Embedded-Prototype";
-    constexpr uint16_t    BLE_APPEARANCE   = 0x03C0; // Generic HID (Keyboard + Mouse composite)
+    constexpr uint16_t    BLE_APPEARANCE   = 0x03C2; // HID Mouse (0x03C2) - Required for Android & iOS pointer routing
     constexpr uint8_t     BLE_BATTERY_LVL  = 100;
     constexpr uint32_t    BLE_REPORT_INTERVAL_MS = 10;
 
