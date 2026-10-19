@@ -38,38 +38,97 @@ static uint32_t s_lastMotionCalcMs = 0;
 static uint32_t s_sensorErrorCount = 0;
 
 // =============================================================================
-// Mode LED Feedback Helper (Non-blocking)
+// Non-Blocking Multi-Action LED Controller
 // =============================================================================
-static uint8_t  s_ledBlinksRemaining = 0;
-static uint32_t s_lastLedToggleMs    = 0;
-static bool     s_ledState           = false;
+// 1. Mode LED (GPIO 4): Dedicated solely to mode switching (1x, 2x, 3x blinks)
+// 2. Status LED (GPIO 3): Bluetooth status (Blinking=Disconnected/Searching, Solid=Connected)
+// 3. Action LED (GPIO 10): Instant visual feedback while pressing buttons / clicks
+// 4. Onboard LED (GPIO 48): Active-LOW, mirrors Status and Action
+static uint8_t  s_modeBlinksRemaining = 0;
+static uint32_t s_lastModeToggleMs    = 0;
+static bool     s_modeLedState        = false;
+
+static uint32_t s_lastBleBlinkMs      = 0;
+static bool     s_bleBlinkState       = false;
+
+static uint32_t s_actionLedUntilMs    = 0;
+static bool     s_actionActive        = false;
 
 static void triggerModeLEDs(Config::Settings::OperatingMode mode) {
-    // Mode 0 (Air Mouse): 1 flash (2 toggles)
-    // Mode 1 (Presentation): 2 flashes (4 toggles)
-    // Mode 2 (Reel Scroller): 3 flashes (6 toggles)
     uint8_t count = static_cast<uint8_t>(mode) + 1;
-    s_ledBlinksRemaining = count * 2;
-    s_lastLedToggleMs = millis();
-    s_ledState = true;
+    s_modeBlinksRemaining = count * 2;
+    s_lastModeToggleMs = millis();
+    s_modeLedState = true;
     digitalWrite(Config::Pins::MODE_LED, HIGH);
-    digitalWrite(Config::Pins::ONBOARD_LED, LOW); // Active-LOW on ESP32-S3 Super Mini
+}
+
+static void triggerActionLED(uint16_t durationMs = 80) {
+    s_actionLedUntilMs = millis() + durationMs;
+    s_actionActive = true;
+    digitalWrite(Config::Pins::ACTION_LED, HIGH);
 }
 
 static void updateLEDs(uint32_t now) {
-    if (s_ledBlinksRemaining > 0) {
-        if ((now - s_lastLedToggleMs) >= 120) {
-            s_lastLedToggleMs = now;
-            s_ledState = !s_ledState;
-            digitalWrite(Config::Pins::MODE_LED, s_ledState ? HIGH : LOW);
-            digitalWrite(Config::Pins::ONBOARD_LED, s_ledState ? LOW : HIGH);
-            s_ledBlinksRemaining--;
-            if (s_ledBlinksRemaining == 0) {
+    // -------------------------------------------------------------------------
+    // 1. Mode LED (GPIO 4): Burst blinks strictly on mode changes
+    // -------------------------------------------------------------------------
+    if (s_modeBlinksRemaining > 0) {
+        if ((now - s_lastModeToggleMs) >= 120) {
+            s_lastModeToggleMs = now;
+            s_modeLedState = !s_modeLedState;
+            digitalWrite(Config::Pins::MODE_LED, s_modeLedState ? HIGH : LOW);
+            s_modeBlinksRemaining--;
+            if (s_modeBlinksRemaining == 0) {
                 digitalWrite(Config::Pins::MODE_LED, LOW);
-                digitalWrite(Config::Pins::ONBOARD_LED, HIGH); // Off
             }
         }
     }
+
+    // -------------------------------------------------------------------------
+    // 2. Action LED (GPIO 10): Lights while button held or for minimum duration
+    // -------------------------------------------------------------------------
+    bool physicalPress = s_buttonManager.isButtonAPressed() ||
+                         s_buttonManager.isButtonBPressed() ||
+                         s_buttonManager.isButtonModePressed();
+
+    if (s_actionActive && (now >= s_actionLedUntilMs) && !physicalPress) {
+        s_actionActive = false;
+        digitalWrite(Config::Pins::ACTION_LED, LOW);
+    } else if (physicalPress) {
+        s_actionActive = true;
+        digitalWrite(Config::Pins::ACTION_LED, HIGH);
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Status LED (GPIO 3) & Onboard LED (GPIO 48): BLE Connection + Activity
+    // -------------------------------------------------------------------------
+    bool statusLedOn = false;
+
+    if (s_stateManager.getState() == System::SystemState::CALIBRATING) {
+        // Fast flicker during IMU calibration (80ms)
+        if ((now - s_lastBleBlinkMs) >= 80) {
+            s_lastBleBlinkMs = now;
+            s_bleBlinkState = !s_bleBlinkState;
+        }
+        statusLedOn = s_bleBlinkState;
+    } else if (!s_bleMouse.isConnected()) {
+        // BLE Disconnected / Searching: Slow rhythmic blink (500ms ON / 500ms OFF)
+        if ((now - s_lastBleBlinkMs) >= 500) {
+            s_lastBleBlinkMs = now;
+            s_bleBlinkState = !s_bleBlinkState;
+        }
+        statusLedOn = s_bleBlinkState;
+        // If button is pressed while disconnected, light up for confirmation
+        if (s_actionActive || physicalPress) {
+            statusLedOn = true;
+        }
+    } else {
+        // BLE Connected: Solid ON, with a crisp negative dip (brief OFF) on button clicks
+        statusLedOn = (s_actionActive || physicalPress) ? false : true;
+    }
+
+    digitalWrite(Config::Pins::STATUS_LED, statusLedOn ? HIGH : LOW);
+    digitalWrite(Config::Pins::ONBOARD_LED, statusLedOn ? LOW : HIGH); // Active-LOW on Super Mini
 }
 
 static void cycleDeviceMode() {
@@ -165,9 +224,13 @@ static void performRecalibration() {
 // Setup
 // =============================================================================
 void setup() {
-    // 1. Initialize indicator LEDs
+    // 1. Initialize multi-action indicator LEDs
     pinMode(Config::Pins::MODE_LED, OUTPUT);
     digitalWrite(Config::Pins::MODE_LED, LOW);
+    pinMode(Config::Pins::STATUS_LED, OUTPUT);
+    digitalWrite(Config::Pins::STATUS_LED, LOW);
+    pinMode(Config::Pins::ACTION_LED, OUTPUT);
+    digitalWrite(Config::Pins::ACTION_LED, LOW);
     pinMode(Config::Pins::ONBOARD_LED, OUTPUT);
     digitalWrite(Config::Pins::ONBOARD_LED, HIGH); // Active-LOW: set HIGH to turn OFF
 
@@ -248,6 +311,7 @@ void loop() {
     Input::ButtonEvent event = s_buttonManager.update();
     if (event != Input::ButtonEvent::NONE) {
         s_diagnostics.printButtonEvent(event);
+        triggerActionLED(80);
 
         switch (event) {
             case Input::ButtonEvent::BUTTON_A_SHORT_PRESS:

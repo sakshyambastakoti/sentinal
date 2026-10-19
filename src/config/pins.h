@@ -30,19 +30,19 @@ namespace Pins {
     constexpr uint8_t BUTTON_MODE = 7; // Right Header, Pin 1 (Dedicated Mode Switch Button)
 
     // =========================================================================
-    // Mode Indicator LEDs
+    // Multi-Action Indicator LEDs
     // =========================================================================
-    // External LED: Connect positive (anode) to GPIO4 via a 220-330 ohm resistor, negative (cathode) to GND.
-    constexpr uint8_t MODE_LED    = 4;  // Right Header, Pin 4 (External Mode Indicator LED)
-    constexpr uint8_t ONBOARD_LED = 48; // ESP32-S3 Super Mini Onboard Indicator LED
+    // External LEDs: Connect positive (anode) to GPIO via a 220-330 ohm resistor, negative (cathode) to common GND.
+    constexpr uint8_t MODE_LED    = 4;  // Right Header, Pin 4 (Dedicated Mode LED: 1x, 2x, 3x blinks on mode change)
+    constexpr uint8_t STATUS_LED  = 3;  // Right Header, Pin 5 (Dedicated BLE Status LED: Blink=Searching, Solid=Connected)
+    constexpr uint8_t ACTION_LED  = 10; // Right Header, Pin 6 (Dedicated Action LED: Lights up while pressing button)
+    constexpr uint8_t ONBOARD_LED = 48; // ESP32-S3 Super Mini Onboard Indicator LED (Active-LOW: mirrors Status & Action)
 
     // =========================================================================
     // Free Expansion Pins
     // =========================================================================
     constexpr uint8_t EXPANSION_GPIO8  = 8;
     constexpr uint8_t EXPANSION_GPIO9  = 9;
-    constexpr uint8_t EXPANSION_GPIO3  = 3;
-    constexpr uint8_t EXPANSION_GPIO10 = 10;
     constexpr uint8_t EXPANSION_GPIO11 = 11;
 
 } // namespace Pins

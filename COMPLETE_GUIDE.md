@@ -13,9 +13,9 @@ The I2C pins are mapped to **GPIO 1** and **GPIO 2** (directly below `3V3` on th
         Toy Laser (+) Wire <── │ [5V/VBUS]  [GPIO 7] │ <── Button Mode (Cycle Operating Modes)
          Common Ground GND <── │ [  GND  ]  [GPIO 6] │ <── Button B (Right Click / Recalib / Prev)
           MPU6050 VCC (3V) <── │ [  3V3  ]  [GPIO 5] │ <── Button A (Left Click / Pause / Next)
-         MPU6050 SDA (I2C) <── │ [GPIO 1 ]  [GPIO 4] │ ──> Mode LED (Optional External Indicator)
-         MPU6050 SCL (I2C) <── │ [GPIO 2 ]  [GPIO 3] │ ──> (Unused Expansion)
-        (Unused Expansion) <── │ [GPIO 8 ]  [GPIO 10]│ ──> (Unused Expansion)
+         MPU6050 SDA (I2C) <── │ [GPIO 1 ]  [GPIO 4] │ ──> Mode LED (1x, 2x, 3x Mode Blinks)
+         MPU6050 SCL (I2C) <── │ [GPIO 2 ]  [GPIO 3] │ ──> BLE Status LED (Blink=Searching, Solid=Connected)
+        (Unused Expansion) <── │ [GPIO 8 ]  [GPIO 10]│ ──> Action LED (Lights while pressing button)
         (Unused Expansion) <── │ [GPIO 9 ]  [GPIO 11]│ ──> (Unused Expansion)
                                │         [USB-C]     │
                                └─────────────────────┘
@@ -28,15 +28,18 @@ The I2C pins are mapped to **GPIO 1** and **GPIO 2** (directly below `3V3` on th
 | Board Pin | Physical Position | Target Peripheral Pin | Function | Notes |
 |:---|:---|:---|:---|:---|
 | **5V/VBUS** | Left Header, Pin 1 (Top) | **Toy Laser (+)** | Laser Power | Direct 5V from USB-C. Powers toy laser without loading 3.3V LDO. |
-| **GND** | Left Header, Pin 2 | **Common Ground** | Ground Return | Tied to MPU6050 GND, Toy Laser (-), and all 3 Buttons common ground. |
+| **GND** | Left Header, Pin 2 | **Common Ground** | Ground Return | Tied to MPU6050 GND, Toy Laser (-), 3 Buttons, and LED Cathodes. |
 | **3V3** | Left Header, Pin 3 | **MPU6050 VCC** | 3.3V Power | Powers MPU6050 logic cleanly from onboard 3.3V regulator. |
 | **GPIO 1** | Left Header, Pin 4 | **MPU6050 SDA** | I2C Data | Hardware I2C SDA (100 kHz Standard Mode). Directly below 3V3. |
 | **GPIO 2** | Left Header, Pin 5 | **MPU6050 SCL** | I2C Clock | Hardware I2C SCL (100 kHz Standard Mode). Directly below GPIO 1. |
 | **GPIO 7** | Right Header, Pin 1 (Top)| **Button Mode** Pin 1 | Mode Switch | Active-LOW (`INPUT_PULLUP`). Pin 2 to GND. Tap to cycle mode; hold to reset. |
 | **GPIO 6** | Right Header, Pin 2 | **Button B** Pin 1 | Action B | Active-LOW (`INPUT_PULLUP`). Pin 2 to GND. Right-Click / Recalib / Prev. |
 | **GPIO 5** | Right Header, Pin 3 | **Button A** Pin 1 | Action A | Active-LOW (`INPUT_PULLUP`). Pin 2 to GND. Left-Click / Pause / Next. |
-| **GPIO 4** | Right Header, Pin 4 | **Mode LED Anode (+)**| Indicator | Optional external Mode LED (via 220Ω resistor to GND). |
-| **GPIO 8, 9, 3, 10, 11** | Various | *Unused* | Expansion | Free GPIOs available for future features. |
+| **GPIO 4** | Right Header, Pin 4 | **Mode LED Anode (+)**| Mode Indicator | **Dedicated Mode LED:** Blinks 1x (Air Mouse), 2x (Presentation), 3x (Reels). |
+| **GPIO 3** | Right Header, Pin 5 | **BLE Status LED Anode (+)**| BLE Status | **Bluetooth Link:** Blinks slowly when searching; Solid ON when connected. |
+| **GPIO 10**| Right Header, Pin 6 | **Action LED Anode (+)**| Action Feedback| **Button Action:** Lights up while pressing button; flashes on click. |
+| **GPIO 8, 9, 11** | Various | *Unused* | Expansion | Free GPIOs available for future features. |
+| *(Onboard)*| Built-in LED on PCB | **GPIO 48 (Onboard LED)** | Internal Output | Active-LOW: Automatically mirrors BLE Status and Button Action. |
 
 ---
 
