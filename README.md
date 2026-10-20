@@ -109,17 +109,17 @@ Engineered specifically for the **ESP32-S3FH4R2 Super Mini**:
 
 ## 4. Operating Modes & Controls
 
-Sentinal supports 4 deterministic operating modes. When mode changes, the **Onboard LED (GPIO 48)** and **Mode LED (GPIO 4)** flash in bursts (**1x = Air Mouse, 2x = Presentation, 3x = Reels, 4x = Wireless OTA Portal**):
+Sentinal supports 4 deterministic operating modes. On boot, it starts in **Mode 1 (Presentation Remote)**. When mode changes, the **Onboard LED (GPIO 48)** and **Mode LED (GPIO 4)** flash in bursts (**1x = Presentation, 2x = Air Mouse, 3x = Reels, 4x = Wireless OTA Portal**):
 
-| Feature / Action | Mode 1: Air Mouse (1 Blink) | Mode 2: Presentation Remote (2 Blinks) | Mode 3: Reel Scroller (3 Blinks) | Mode 4: Wireless OTA Portal (4 Blinks) |
+| Feature / Action | Mode 1: Presentation Remote (1 Blink) | Mode 2: Air Mouse (2 Blinks) | Mode 3: Reel Scroller (3 Blinks) | Mode 4: Wireless OTA Portal (4 Blinks) |
 |:---|:---|:---|:---|:---|
-| **Gyro Cursor Motion** | Active (Wrist-driven pointer) | Paused (Zero shake on slides) | Paused (Zero cursor displacement) | Paused (Zero motion reports) |
-| **Button A (Tap)** | Left Mouse Click | Next Slide (`PAGE_DOWN` / Left Click Fallback for Canva & PowerPoint) | Next Reel (`DOWN_ARROW` + Wheel Down) | Display OTA Network Status |
-| **Button B (Tap)** | Right Mouse Click | Previous Slide (`PAGE_UP` / Wheel Up Fallback for Canva & PowerPoint) | Previous Reel (`UP_ARROW` + Wheel Up) | Display OTA Portal Info |
-| **Button A (Hold $\ge 700$ms)** | Toggle Pointer Motion Pause | Start / Resume Slideshow (`F5`) | Play / Pause Video (`SPACE`) | - |
+| **Gyro Cursor Motion** | Paused (Zero shake on slides) | Active (Wrist-driven pointer) | Paused (Zero cursor displacement) | Paused (Zero motion reports) |
+| **Button A (Tap)** | Next Slide (`PAGE_DOWN` / Left Click Fallback) | Left Mouse Click | Next Reel (`DOWN_ARROW` + Wheel Down) | Display OTA Network Status |
+| **Button B (Tap)** | Previous Slide (`PAGE_UP` / Wheel Up Fallback) | Right Mouse Click | Previous Reel (`UP_ARROW` + Wheel Up) | Display OTA Portal Info |
+| **Button A (Hold $\ge 700$ms)** | Start / Resume Slideshow (`F5`) | Toggle Pointer Motion Pause | Play / Pause Video (`SPACE`) | - |
 | **Button B (Hold $\ge 700$ms)** | Stationary Gyro Recalibration | Stationary Gyro Recalibration | Stationary Gyro Recalibration | - |
-| **Mode Btn (Tap)** | Cycle to Mode 2 (Presentation) | Cycle to Mode 3 (Reels) | Cycle to Mode 1 (Air Mouse) | Exit to Mode 1 (Air Mouse) |
-| **Mode Btn (Hold 3s)** | **Launch Wireless OTA Web Portal** | **Launch Wireless OTA Web Portal** | **Launch Wireless OTA Web Portal** | Return to Mode 1 (Air Mouse) |
+| **Mode Btn (Tap)** | Cycle to Mode 2 (Air Mouse) | Cycle to Mode 3 (Reels) | Cycle to Mode 1 (Presentation) | Exit to Mode 1 (Presentation) |
+| **Mode Btn (Hold 3s)** | **Launch Wireless OTA Web Portal** | **Launch Wireless OTA Web Portal** | **Launch Wireless OTA Web Portal** | Return to Mode 1 (Presentation) |
 
 ---
 
@@ -147,7 +147,7 @@ Sentinal includes a dual-partition Over-The-Air (OTA) update system (`min_spiffs
    - Click **UPLOAD FIRMWARE**. A real-time progress bar shows upload progress.
    - Once upload reaches 100%, Sentinal automatically verifies the image hash, switches OTA partitions, and restarts into the new firmware within 6 seconds.
 5. **Exit OTA Mode:**
-   - Tap **Button Mode** to return directly to Mode 1 (Air Mouse). The Wi-Fi radio is immediately powered down to conserve battery and eliminate 2.4 GHz RF contention.
+   - Tap **Button Mode** to return directly to Mode 1 (Presentation Remote). The Wi-Fi radio is immediately powered down to conserve battery and eliminate 2.4 GHz RF contention.
 
 ---
 
@@ -170,11 +170,11 @@ Sentinal provides continuous diagnostics over hardware USB CDC Serial at **11520
 
 | Command Key | Action | Description |
 |:------------|:-------|:------------|
-| `'1'` | Force Mode 1 | Instantly sets Air Mouse mode. |
-| `'2'` | Force Mode 2 | Instantly sets Presentation Remote mode. |
+| `'1'` | Force Mode 1 | Instantly sets Presentation Remote mode. |
+| `'2'` | Force Mode 2 | Instantly sets Air Mouse mode. |
 | `'3'` | Force Mode 3 | Instantly sets Reel Scroller mode. |
 | `'4'` / `'o'` / `'O'` | Force Mode 4 | Enters Wireless OTA Web Portal mode. |
-| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Air Mouse $\rightarrow$ Presentation $\rightarrow$ Reels $\rightarrow$ OTA. |
+| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Presentation $\rightarrow$ Air Mouse $\rightarrow$ Reels $\rightarrow$ Presentation. |
 | `'a'` / `'A'` | Test Left Click | Sends a Left Mouse Click report over BLE. |
 | `'b'` / `'B'` | Test Right Click | Sends a Right Mouse Click report over BLE. |
 | `'k'` / `'K'` | Test Key Action | Tests active mode keyboard/wheel action. |

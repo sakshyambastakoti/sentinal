@@ -167,7 +167,7 @@ static void cycleDeviceMode() {
 }
 
 static void resetDeviceMode() {
-    setDeviceMode(Config::Settings::OperatingMode::AIR_MOUSE);
+    setDeviceMode(Config::Settings::OperatingMode::PRESENTATION);
 }
 
 // =============================================================================
@@ -274,6 +274,7 @@ void setup() {
 
     // 4. Initialize physical push buttons (Button A, Button B, Button Mode)
     s_buttonManager.init(Config::Pins::BUTTON_A, Config::Pins::BUTTON_B, Config::Pins::BUTTON_MODE);
+    s_motionProcessor.setPaused(true); // Start in Presentation Mode with gyro pointer safely paused
     triggerModeLEDs(s_stateManager.getOperatingMode());
 
     // 5. Initialize Wireless OTA Manager (load saved credentials)
@@ -351,9 +352,9 @@ void loop() {
                       s_motionProcessor.isInvertX() ? "TRUE" : "FALSE",
                       s_motionProcessor.isInvertY() ? "TRUE" : "FALSE");
     } else if (cmd == 7) {
-        setDeviceMode(Config::Settings::OperatingMode::AIR_MOUSE);
-    } else if (cmd == 8) {
         setDeviceMode(Config::Settings::OperatingMode::PRESENTATION);
+    } else if (cmd == 8) {
+        setDeviceMode(Config::Settings::OperatingMode::AIR_MOUSE);
     } else if (cmd == 9) {
         setDeviceMode(Config::Settings::OperatingMode::REEL_SCROLLER);
     } else if (cmd == 13) {

@@ -69,11 +69,11 @@ void Diagnostics::printBLEStatus(bool advertising, bool connected) {
 
 void Diagnostics::printOperatingMode(Config::Settings::OperatingMode mode) {
     switch (mode) {
-        case Config::Settings::OperatingMode::AIR_MOUSE:
-            Serial.println("[MODE] Active: AIR_MOUSE (Mode 1: 6-Axis Desktop Air Mouse)");
-            break;
         case Config::Settings::OperatingMode::PRESENTATION:
-            Serial.println("[MODE] Active: PRESENTATION (Mode 2: Presentation Remote Slide Clicker)");
+            Serial.println("[MODE] Active: PRESENTATION (Mode 1: Presentation Remote Slide Clicker)");
+            break;
+        case Config::Settings::OperatingMode::AIR_MOUSE:
+            Serial.println("[MODE] Active: AIR_MOUSE (Mode 2: 6-Axis Desktop Air Mouse)");
             break;
         case Config::Settings::OperatingMode::REEL_SCROLLER:
             Serial.println("[MODE] Active: REEL_SCROLLER (Mode 3: Social Reel / Shorts Scroller)");
@@ -189,10 +189,10 @@ uint8_t Diagnostics::processSerialCommands() {
         } else if (ch == 'y' || ch == 'Y') {
             return 6;
         } else if (ch == '1') {
-            Serial.println("[CMD] Mode 1 (Air Mouse) selected via USB serial.");
+            Serial.println("[CMD] Mode 1 (Presentation Remote) selected via USB serial.");
             return 7;
         } else if (ch == '2') {
-            Serial.println("[CMD] Mode 2 (Presentation Remote) selected via USB serial.");
+            Serial.println("[CMD] Mode 2 (Air Mouse) selected via USB serial.");
             return 8;
         } else if (ch == '3') {
             Serial.println("[CMD] Mode 3 (Reel Scroller) selected via USB serial.");
@@ -208,8 +208,8 @@ uint8_t Diagnostics::processSerialCommands() {
             return 12;
         } else if (ch == 'h' || ch == 'H') {
             Serial.println("[CMD] Available commands:");
-            Serial.println("  '1' - Force Mode 1: Air Mouse");
-            Serial.println("  '2' - Force Mode 2: Presentation Remote (Arrow Keys)");
+            Serial.println("  '1' - Force Mode 1: Presentation Remote (Arrow Keys)");
+            Serial.println("  '2' - Force Mode 2: Air Mouse (Gyro Pointer)");
             Serial.println("  '3' - Force Mode 3: Reel Scroller (Down/Up Arrow & Wheel)");
             Serial.println("  '4' - Force Mode 4: Wireless OTA Web Portal (Firmware Update)");
             Serial.println("  'o' - Enter Wireless OTA Mode");

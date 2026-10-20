@@ -59,10 +59,10 @@ The firmware automatically activates the ESP32-S3 internal pull-up resistors (`I
   - Pin 1 $\rightarrow$ **`GPIO 7`** (Right Header, Pin 1 — Top Right opposite 5V/VBUS)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
   - *Short Tap:* Cycles Operating Modes:
-    1. **Mode 1: AIR_MOUSE** (LED 1 blink) — 6-Axis Desktop Air Mouse
-    2. **Mode 2: PRESENTATION** (LED 2 blinks) — Slide Clicker Remote
+    1. **Mode 1: PRESENTATION** (LED 1 blink) — Slide Clicker Remote (Default on boot)
+    2. **Mode 2: AIR_MOUSE** (LED 2 blinks) — 6-Axis Desktop Air Mouse
     3. **Mode 3: REEL_SCROLLER** (LED 3 blinks) — TikTok / Reels / Shorts Scroller
-  - *Long Hold ($\ge 3\text{ seconds}$):* **Launches the Wireless OTA Web Portal** (SoftAP `Sentinal-OTA`, IP `192.168.4.1`, LED flashes 4 times). If already in OTA mode, holding for 3 seconds exits back to Mode 1 (Air Mouse).
+  - *Long Hold ($\ge 3\text{ seconds}$):* **Launches the Wireless OTA Web Portal** (SoftAP `Sentinal-OTA`, IP `192.168.4.1`, LED flashes 4 times). If already in OTA mode, holding for 3 seconds exits back to Mode 1 (Presentation Remote).
 - **Button A (Action A):**
   - Pin 1 $\rightarrow$ **`GPIO 5`** (Right Header, Pin 3)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
@@ -122,20 +122,22 @@ pio device monitor
 
 ## 6. Quick Functional Acceptance Checklist
 
-1. **Boot Test:** Open the serial monitor at 115200 baud (`pio device monitor`). You will see the startup banner displaying pinout, detected MPU6050 address `0x68`, and calibration completion. The **Onboard LED (GPIO 48)** flashes 1x to confirm Mode 1 (`AIR_MOUSE`).
-2. **Corrected Cursor Motion:**
+1. **Boot Test:** Open the serial monitor at 115200 baud (`pio device monitor`). You will see the startup banner displaying pinout, detected MPU6050 address `0x68`, and calibration completion. The **Onboard LED (GPIO 48)** flashes 1x to confirm Mode 1 (`PRESENTATION`).
+2. **Corrected Cursor Motion (in Mode 2):**
+   - Switch to Mode 2 (Air Mouse) by tapping Mode button (LED flashes 2x).
    - Tilt UP $\rightarrow$ Cursor moves UP.
    - Tilt DOWN $\rightarrow$ Cursor moves DOWN.
    - Rotate LEFT $\rightarrow$ Cursor moves LEFT.
    - Rotate RIGHT $\rightarrow$ Cursor moves RIGHT.
 3. **Stationary Test:** Rest the board on a flat table. The cursor stays completely stationary with zero drift or jitter.
-4. **Left / Right Click (Air Mouse Mode):** Tap Button A for left click; tap Button B for right click (held for solid 35ms pulse for guaranteed OS detection).
-5. **Motion Pause:** Press and hold Button A for $\ge 700\text{ ms}$. Cursor freezes for wrist repositioning. Long press Button A again to resume.
+4. **Presentation Controls (Mode 1 - Boot Default):** Tap Button A to advance slide (`PAGE_DOWN` / Left Click fallback); tap Button B to go back (`PAGE_UP` / Wheel Up fallback). Zero wrist shake on slides!
+5. **Air Mouse Controls (Mode 2):** Tap Button A for left click; tap Button B for right click. Long hold Button A freezes motion for repositioning.
 6. **Mode Switching (Mode Button GPIO 7 OR A+B Simultaneously):**
-   - **Switch to Mode 2 (`PRESENTATION`):** Onboard LED flashes twice. Gyro cursor motion pauses (zero shake). Button A sends **Right Arrow** (`KEY_RIGHT_ARROW`), Button B sends **Left Arrow** (`KEY_LEFT_ARROW`). Long hold Button A launches fullscreen (`F5`).
-   - **Switch to Mode 3 (`REEL_SCROLLER`):** Onboard LED flashes 3 times. Button A sends **Down Arrow** + Mouse Wheel Down (-5), Button B sends **Up Arrow** + Mouse Wheel Up (+5). Long hold Button A toggles Play/Pause (`SPACE`).
-   - **Switch to Mode 4 (`OTA_UPDATE`):** Onboard LED flashes 4 times. BLE HID is paused and the Wi-Fi radio powers on, hosting SoftAP `Sentinal-OTA`.
-   - **Switch back to Mode 1 (`AIR_MOUSE`):** Onboard LED flashes once. Wi-Fi powers off and gyro cursor movement immediately resumes!
+   - **Boot Default / Mode 1 (`PRESENTATION`):** Onboard LED flashes once. Gyro cursor motion pauses (zero shake). Button A advances slides, Button B goes back.
+   - **Switch to Mode 2 (`AIR_MOUSE`):** Onboard LED flashes 2 times. Gyro wrist motion activates.
+   - **Switch to Mode 3 (`REEL_SCROLLER`):** Onboard LED flashes 3 times. Button A scrolls down to next reel, Button B scrolls up to previous reel.
+   - **Mode Button Hold 3s / Mode 4 (`OTA_UPDATE`):** Onboard LED flashes 4 times. BLE HID is paused and the Wi-Fi radio powers on, hosting SoftAP `Sentinal-OTA`.
+   - **Switch back to Mode 1 (`PRESENTATION`):** Onboard LED flashes once. Wi-Fi powers off and presentation remote mode resumes!
 
 ---
 

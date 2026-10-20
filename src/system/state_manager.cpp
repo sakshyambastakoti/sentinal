@@ -10,14 +10,14 @@ namespace System {
 StateManager::StateManager()
     : _currentState(SystemState::INITIALIZING),
       _previousState(SystemState::INITIALIZING),
-      _currentMode(Config::Settings::OperatingMode::AIR_MOUSE),
+      _currentMode(Config::Settings::OperatingMode::PRESENTATION),
       _callback(nullptr),
       _modeCallback(nullptr) {}
 
 void StateManager::init() {
     _currentState = SystemState::INITIALIZING;
     _previousState = SystemState::INITIALIZING;
-    _currentMode = Config::Settings::OperatingMode::AIR_MOUSE;
+    _currentMode = Config::Settings::OperatingMode::PRESENTATION;
 }
 
 const char* StateManager::getStateName(SystemState state) const {
@@ -109,11 +109,11 @@ bool StateManager::transitionTo(SystemState newState) {
 
 Config::Settings::OperatingMode StateManager::cycleOperatingMode() {
     uint8_t next = static_cast<uint8_t>(_currentMode) + 1;
-    // Tapping Mode cycles between primary modes (Air Mouse -> Presentation -> Reel Scroller -> Air Mouse)
+    // Tapping Mode cycles between primary modes (Presentation -> Air Mouse -> Reel Scroller -> Presentation)
     // OTA Update Mode (Mode 4) is entered specifically by holding Button Mode for 3 seconds
     if (_currentMode == Config::Settings::OperatingMode::OTA_UPDATE ||
         next >= static_cast<uint8_t>(Config::Settings::OperatingMode::OTA_UPDATE)) {
-        next = static_cast<uint8_t>(Config::Settings::OperatingMode::AIR_MOUSE);
+        next = static_cast<uint8_t>(Config::Settings::OperatingMode::PRESENTATION);
     }
     setOperatingMode(static_cast<Config::Settings::OperatingMode>(next));
     return _currentMode;
@@ -133,10 +133,10 @@ bool StateManager::setOperatingMode(Config::Settings::OperatingMode newMode) {
 
 const char* StateManager::getOperatingModeName(Config::Settings::OperatingMode mode) const {
     switch (mode) {
-        case Config::Settings::OperatingMode::AIR_MOUSE:
-            return "AIR_MOUSE (Mode 1: 6-Axis Desktop Air Mouse)";
         case Config::Settings::OperatingMode::PRESENTATION:
-            return "PRESENTATION (Mode 2: Presentation Remote Slide Clicker)";
+            return "PRESENTATION (Mode 1: Presentation Remote Slide Clicker)";
+        case Config::Settings::OperatingMode::AIR_MOUSE:
+            return "AIR_MOUSE (Mode 2: 6-Axis Desktop Air Mouse)";
         case Config::Settings::OperatingMode::REEL_SCROLLER:
             return "REEL_SCROLLER (Mode 3: Social Reel / Shorts Scroller)";
         case Config::Settings::OperatingMode::OTA_UPDATE:
