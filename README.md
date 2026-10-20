@@ -118,7 +118,8 @@ Sentinal supports 4 deterministic operating modes. When mode changes, the **Onbo
 | **Button B (Tap)** | Right Mouse Click | Previous Slide (`PAGE_UP` / Wheel Up Fallback for Canva & PowerPoint) | Previous Reel (`UP_ARROW` + Wheel Up) | Display OTA Portal Info |
 | **Button A (Hold $\ge 700$ms)** | Toggle Pointer Motion Pause | Start / Resume Slideshow (`F5`) | Play / Pause Video (`SPACE`) | - |
 | **Button B (Hold $\ge 700$ms)** | Stationary Gyro Recalibration | Stationary Gyro Recalibration | Stationary Gyro Recalibration | - |
-| **Mode Switch** | Tap Mode Btn (or A+B) | Tap Mode Btn (or A+B) | Tap Mode Btn (or A+B) | Tap Mode Btn $\rightarrow$ Mode 1 |
+| **Mode Btn (Tap)** | Cycle to Mode 2 (Presentation) | Cycle to Mode 3 (Reels) | Cycle to Mode 1 (Air Mouse) | Exit to Mode 1 (Air Mouse) |
+| **Mode Btn (Hold 3s)** | **Launch Wireless OTA Web Portal** | **Launch Wireless OTA Web Portal** | **Launch Wireless OTA Web Portal** | Return to Mode 1 (Air Mouse) |
 
 ---
 
@@ -128,7 +129,7 @@ Sentinal includes a dual-partition Over-The-Air (OTA) update system (`min_spiffs
 
 ### How to Perform a Wireless Update:
 1. **Enter OTA Mode (Mode 4):**
-   - Tap **Button Mode** (or press Button A + B simultaneously) until the **Mode LED flashes 4 times**, or send `'4'` or `'o'` over the USB Serial terminal.
+   - **Press and hold Button Mode for 3 seconds** until the **Mode LED flashes 4 times** (or send `'4'` or `'o'` over the USB Serial terminal).
    - Sentinal will immediately start its fallback SoftAP hotspot:
      - **Wi-Fi SSID:** `Sentinal-OTA`
      - **Password:** *(None / Open Network)*

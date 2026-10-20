@@ -62,8 +62,7 @@ The firmware automatically activates the ESP32-S3 internal pull-up resistors (`I
     1. **Mode 1: AIR_MOUSE** (LED 1 blink) — 6-Axis Desktop Air Mouse
     2. **Mode 2: PRESENTATION** (LED 2 blinks) — Slide Clicker Remote
     3. **Mode 3: REEL_SCROLLER** (LED 3 blinks) — TikTok / Reels / Shorts Scroller
-    4. **Mode 4: OTA_UPDATE** (LED 4 blinks) — Wireless OTA Web Portal
-  - *Long Hold ($\ge 700\text{ ms}$):* Resets directly back to Mode 1 (Air Mouse)
+  - *Long Hold ($\ge 3\text{ seconds}$):* **Launches the Wireless OTA Web Portal** (SoftAP `Sentinal-OTA`, IP `192.168.4.1`, LED flashes 4 times). If already in OTA mode, holding for 3 seconds exits back to Mode 1 (Air Mouse).
 - **Button A (Action A):**
   - Pin 1 $\rightarrow$ **`GPIO 5`** (Right Header, Pin 3)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
@@ -175,7 +174,7 @@ Sentinal enables wireless firmware upgrades over Wi-Fi without ever needing to p
 - **`spiffs`**: 192 KB (Non-volatile storage)
 
 ### Step-by-Step Wireless Upgrade:
-1. **Enter Mode 4:** Tap **Button Mode** on Sentinal until the LED flashes 4 times (or enter `'4'` / `'o'` in serial).
+1. **Enter Mode 4 (OTA Web Portal):** Press and hold **Button Mode for 3 seconds** on Sentinal until the Mode LED flashes 4 times (or enter `'4'` / `'o'` in serial).
 2. **Connect to Wi-Fi:**
    - Network Name: **`Sentinal-OTA`**
    - Password: *None*

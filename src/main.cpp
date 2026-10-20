@@ -456,8 +456,14 @@ void loop() {
                 break;
 
             case Input::ButtonEvent::BUTTON_MODE_LONG_PRESS:
-                // Dedicated Mode Switch Button hold: Reset directly to Air Mouse Mode
-                resetDeviceMode();
+                // Dedicated Mode Button held for 3 seconds: Launch Wireless OTA Web Portal
+                if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::OTA_UPDATE) {
+                    Serial.println("[INPUT] Mode button held for 3s while in OTA Mode -> Exiting to Air Mouse Mode.");
+                    setDeviceMode(Config::Settings::OperatingMode::AIR_MOUSE);
+                } else {
+                    Serial.println("[INPUT] Mode button held for 3s -> Launching Wireless OTA Web Portal...");
+                    setDeviceMode(Config::Settings::OperatingMode::OTA_UPDATE);
+                }
                 break;
 
             default:

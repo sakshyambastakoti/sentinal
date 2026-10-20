@@ -97,9 +97,10 @@ namespace Settings {
     // =========================================================================
     // Button Timing and Debounce Parameters
     // =========================================================================
-    constexpr uint32_t BUTTON_DEBOUNCE_MS     = 25;  // 25 ms debounce filter
-    constexpr uint32_t BUTTON_LONG_PRESS_MS   = 700; // 700 ms to trigger long press
-    constexpr uint32_t BUTTON_SIMULTANEOUS_MS = 50;  // Window to detect chorded press
+    constexpr uint32_t BUTTON_DEBOUNCE_MS     = 25;   // 25 ms debounce filter
+    constexpr uint32_t BUTTON_LONG_PRESS_MS   = 700;  // 700 ms to trigger long press (Buttons A & B)
+    constexpr uint32_t BUTTON_MODE_HOLD_MS    = 3000; // 3000 ms (3 seconds) to trigger Wireless OTA Web Portal
+    constexpr uint32_t BUTTON_SIMULTANEOUS_MS = 50;   // Window to detect chorded press
     constexpr uint32_t BUTTON_STUCK_WARN_MS   = 25000;
 
     // =========================================================================

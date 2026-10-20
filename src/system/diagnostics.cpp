@@ -105,7 +105,7 @@ void Diagnostics::printButtonEvent(Input::ButtonEvent event) {
             Serial.println("[INPUT] Button B Long Press: Trigger Gyro Recalibration");
             break;
         case Input::ButtonEvent::BUTTON_MODE_LONG_PRESS:
-            Serial.println("[INPUT] Button Mode Long Press: Reset to Default Mode (AIR_MOUSE)");
+            Serial.println("[INPUT] Button Mode Long Press (3s): Launch Wireless OTA Web Portal");
             break;
         case Input::ButtonEvent::SIMULTANEOUS_PRESS:
             Serial.println("[INPUT] Simultaneous Press (Both A & B): Alternate Mode Cycle Shortcut");
@@ -213,7 +213,7 @@ uint8_t Diagnostics::processSerialCommands() {
             Serial.println("  '3' - Force Mode 3: Reel Scroller (Down/Up Arrow & Wheel)");
             Serial.println("  '4' - Force Mode 4: Wireless OTA Web Portal (Firmware Update)");
             Serial.println("  'o' - Enter Wireless OTA Mode");
-            Serial.println("  'm' - Cycle operating mode (1 -> 2 -> 3 -> 4 -> 1)");
+            Serial.println("  'm' - Cycle operating mode (1 -> 2 -> 3 -> 1)");
             Serial.println("  'a' - Test Left Mouse Click");
             Serial.println("  'b' - Test Right Mouse Click");
             Serial.println("  'k' - Test Reel/Presentation Key Action");

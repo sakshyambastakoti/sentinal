@@ -135,11 +135,11 @@ ButtonEvent ButtonManager::update() {
     }
 
     // -------------------------------------------------------------------------
-    // 4. Button Mode Processing (Mode Switch / Mode Reset)
+    // 4. Button Mode Processing (Mode Switch / 3-Second Hold for OTA Web Portal)
     // -------------------------------------------------------------------------
     if (_btnMode.isPressed) {
         if (!_btnMode.chorded && !_btnMode.longPressTriggered) {
-            if ((now - _btnMode.pressStartTime) >= Config::Settings::BUTTON_LONG_PRESS_MS) {
+            if ((now - _btnMode.pressStartTime) >= Config::Settings::BUTTON_MODE_HOLD_MS) {
                 _btnMode.longPressTriggered = true;
                 return ButtonEvent::BUTTON_MODE_LONG_PRESS;
             }
@@ -155,7 +155,7 @@ ButtonEvent ButtonManager::update() {
             _btnMode.chorded = false;
             _btnMode.longPressTriggered = false;
 
-            if (!wasChorded && !wasLong && holdDuration < Config::Settings::BUTTON_LONG_PRESS_MS) {
+            if (!wasChorded && !wasLong && holdDuration < Config::Settings::BUTTON_MODE_HOLD_MS) {
                 return ButtonEvent::BUTTON_MODE_SHORT_PRESS;
             }
         }

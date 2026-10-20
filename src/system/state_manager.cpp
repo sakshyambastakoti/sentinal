@@ -109,7 +109,10 @@ bool StateManager::transitionTo(SystemState newState) {
 
 Config::Settings::OperatingMode StateManager::cycleOperatingMode() {
     uint8_t next = static_cast<uint8_t>(_currentMode) + 1;
-    if (next > static_cast<uint8_t>(Config::Settings::OperatingMode::OTA_UPDATE)) {
+    // Tapping Mode cycles between primary modes (Air Mouse -> Presentation -> Reel Scroller -> Air Mouse)
+    // OTA Update Mode (Mode 4) is entered specifically by holding Button Mode for 3 seconds
+    if (_currentMode == Config::Settings::OperatingMode::OTA_UPDATE ||
+        next >= static_cast<uint8_t>(Config::Settings::OperatingMode::OTA_UPDATE)) {
         next = static_cast<uint8_t>(Config::Settings::OperatingMode::AIR_MOUSE);
     }
     setOperatingMode(static_cast<Config::Settings::OperatingMode>(next));
