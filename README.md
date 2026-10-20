@@ -109,20 +109,48 @@ Engineered specifically for the **ESP32-S3FH4R2 Super Mini**:
 
 ## 4. Operating Modes & Controls
 
-Sentinal supports 3 deterministic operating modes. When mode changes, the **Onboard LED (GPIO 48)** and **Mode LED (GPIO 4)** flash in bursts (**1x = Air Mouse, 2x = Presentation, 3x = Reels**):
+Sentinal supports 4 deterministic operating modes. When mode changes, the **Onboard LED (GPIO 48)** and **Mode LED (GPIO 4)** flash in bursts (**1x = Air Mouse, 2x = Presentation, 3x = Reels, 4x = Wireless OTA Portal**):
 
-| Feature / Action | Mode 1: Air Mouse (1 Blink) | Mode 2: Presentation Remote (2 Blinks) | Mode 3: Reel Scroller (3 Blinks) |
-|:---|:---|:---|:---|
-| **Gyro Cursor Motion** | Active (Wrist-driven pointer) | Paused (Zero shake on slides) | Paused (Zero cursor displacement) |
-| **Button A (Tap)** | Left Mouse Click | Next Slide (`PAGE_DOWN` / Left Click Fallback for Canva & PowerPoint) | Next Reel (`DOWN_ARROW` + Wheel Down) |
-| **Button B (Tap)** | Right Mouse Click | Previous Slide (`PAGE_UP` / Wheel Up Fallback for Canva & PowerPoint) | Previous Reel (`UP_ARROW` + Wheel Up) |
-| **Button A (Hold $\ge 700$ms)** | Toggle Pointer Motion Pause | Start / Resume Slideshow (`F5`) | Play / Pause Video (`SPACE`) |
-| **Button B (Hold $\ge 700$ms)** | Stationary Gyro Recalibration | Stationary Gyro Recalibration | Stationary Gyro Recalibration |
-| **Mode Switch** | Tap Mode Btn (or A+B simultaneously) | Tap Mode Btn (or A+B simultaneously) | Tap Mode Btn (or A+B simultaneously) |
+| Feature / Action | Mode 1: Air Mouse (1 Blink) | Mode 2: Presentation Remote (2 Blinks) | Mode 3: Reel Scroller (3 Blinks) | Mode 4: Wireless OTA Portal (4 Blinks) |
+|:---|:---|:---|:---|:---|
+| **Gyro Cursor Motion** | Active (Wrist-driven pointer) | Paused (Zero shake on slides) | Paused (Zero cursor displacement) | Paused (Zero motion reports) |
+| **Button A (Tap)** | Left Mouse Click | Next Slide (`PAGE_DOWN` / Left Click Fallback for Canva & PowerPoint) | Next Reel (`DOWN_ARROW` + Wheel Down) | Display OTA Network Status |
+| **Button B (Tap)** | Right Mouse Click | Previous Slide (`PAGE_UP` / Wheel Up Fallback for Canva & PowerPoint) | Previous Reel (`UP_ARROW` + Wheel Up) | Display OTA Portal Info |
+| **Button A (Hold $\ge 700$ms)** | Toggle Pointer Motion Pause | Start / Resume Slideshow (`F5`) | Play / Pause Video (`SPACE`) | - |
+| **Button B (Hold $\ge 700$ms)** | Stationary Gyro Recalibration | Stationary Gyro Recalibration | Stationary Gyro Recalibration | - |
+| **Mode Switch** | Tap Mode Btn (or A+B) | Tap Mode Btn (or A+B) | Tap Mode Btn (or A+B) | Tap Mode Btn $\rightarrow$ Mode 1 |
 
 ---
 
-## 5. Apple iPhone / iOS Setup (AssistiveTouch)
+## 5. Wireless OTA Updates (Web Portal)
+
+Sentinal includes a dual-partition Over-The-Air (OTA) update system (`min_spiffs.csv` with dual 1.875MB application slots) and an embedded web portal with a minimalist black-and-white interface (zero emojis).
+
+### How to Perform a Wireless Update:
+1. **Enter OTA Mode (Mode 4):**
+   - Tap **Button Mode** (or press Button A + B simultaneously) until the **Mode LED flashes 4 times**, or send `'4'` or `'o'` over the USB Serial terminal.
+   - Sentinal will immediately start its fallback SoftAP hotspot:
+     - **Wi-Fi SSID:** `Sentinal-OTA`
+     - **Password:** *(None / Open Network)*
+     - **Default Portal IP:** `http://192.168.4.1`
+     - **mDNS Host:** `http://sentinal.local`
+2. **Connect to Sentinal:**
+   - On your laptop, phone, or tablet, connect to the Wi-Fi network **`Sentinal-OTA`**.
+   - Open any browser and navigate to **`http://192.168.4.1`** (or `http://sentinal.local`).
+3. **Wi-Fi Configuration (Optional Station Mode):**
+   - Enter your local Wi-Fi network SSID and Password in the portal and click **CONNECT TO WIFI**.
+   - Sentinal saves these credentials permanently to NVS flash and joins your local network, allowing future OTA access directly through your local LAN IP without disconnecting from the internet.
+4. **Wireless Firmware Upload:**
+   - In PlatformIO, build your updated binary (`pio run`). The compiled firmware is located at `.pio/build/esp32-s3-devkitc-1/firmware.bin`.
+   - In the web portal, click **SELECT FIRMWARE (.BIN)** and choose your `.bin` file.
+   - Click **UPLOAD FIRMWARE**. A real-time progress bar shows upload progress.
+   - Once upload reaches 100%, Sentinal automatically verifies the image hash, switches OTA partitions, and restarts into the new firmware within 6 seconds.
+5. **Exit OTA Mode:**
+   - Tap **Button Mode** to return directly to Mode 1 (Air Mouse). The Wi-Fi radio is immediately powered down to conserve battery and eliminate 2.4 GHz RF contention.
+
+---
+
+## 6. Apple iPhone / iOS Setup (AssistiveTouch)
 
 On iOS, Apple requires AssistiveTouch to be enabled for apps like Instagram and TikTok to accept touch scroll gestures:
 
@@ -135,7 +163,7 @@ On iOS, Apple requires AssistiveTouch to be enabled for apps like Instagram and 
 
 ---
 
-## 6. USB Serial Telemetry & Diagnostics
+## 7. USB Serial Telemetry & Diagnostics
 
 Sentinal provides continuous diagnostics over hardware USB CDC Serial at **115200 baud**:
 
@@ -144,7 +172,8 @@ Sentinal provides continuous diagnostics over hardware USB CDC Serial at **11520
 | `'1'` | Force Mode 1 | Instantly sets Air Mouse mode. |
 | `'2'` | Force Mode 2 | Instantly sets Presentation Remote mode. |
 | `'3'` | Force Mode 3 | Instantly sets Reel Scroller mode. |
-| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Air Mouse $\rightarrow$ Presentation $\rightarrow$ Reels. |
+| `'4'` / `'o'` / `'O'` | Force Mode 4 | Enters Wireless OTA Web Portal mode. |
+| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Air Mouse $\rightarrow$ Presentation $\rightarrow$ Reels $\rightarrow$ OTA. |
 | `'a'` / `'A'` | Test Left Click | Sends a Left Mouse Click report over BLE. |
 | `'b'` / `'B'` | Test Right Click | Sends a Right Mouse Click report over BLE. |
 | `'k'` / `'K'` | Test Key Action | Tests active mode keyboard/wheel action. |
@@ -157,7 +186,7 @@ Sentinal provides continuous diagnostics over hardware USB CDC Serial at **11520
 
 ---
 
-## 6. Build & Flash Instructions
+## 8. Build & Flash Instructions
 
 ### Prerequisites
 - [Visual Studio Code](https://code.visualstudio.com/) + [PlatformIO IDE Extension](https://platformio.org/)
@@ -172,7 +201,7 @@ cd sentinal
 # Build the firmware
 pio run
 
-# Flash to your board
+# Flash to your board (via USB)
 pio run --target upload
 
 # Open the serial monitor
@@ -181,13 +210,14 @@ pio device monitor
 
 ---
 
-## 7. Version History
+## 9. Version History
 
 - **v1.0.0 (Current Release):**
   - Official project branding as **Sentinal**.
   - Bluetooth device broadcast name updated to **`Sentinal`**.
   - Fixed MPU6050 physical motion inversion (`INVERT_X = false`, `INVERT_Y = true`).
   - Added dedicated serial commands (`'x'`, `'y'`, `'i'`) for real-time axis fine-tuning.
-  - Full support for 3 Operating Modes (Air Mouse, Presentation Remote, Reel Scroller).
+  - Full support for 4 Operating Modes (Air Mouse, Presentation Remote, Reel Scroller, Wireless OTA Portal).
+  - Built-in Wireless Over-The-Air (OTA) web portal with minimalist black-and-white theme, live progress bar, Wi-Fi NVS configuration, and dual 1.875MB application partition slots.
   - Tri-color multi-action LED driver (Mode, Status, Action, and Onboard LED).
   - High-performance NimBLE HID stack with auto-reconnection and composite Mouse/Keyboard/Consumer reports.

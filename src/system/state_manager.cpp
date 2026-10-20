@@ -109,7 +109,7 @@ bool StateManager::transitionTo(SystemState newState) {
 
 Config::Settings::OperatingMode StateManager::cycleOperatingMode() {
     uint8_t next = static_cast<uint8_t>(_currentMode) + 1;
-    if (next > static_cast<uint8_t>(Config::Settings::OperatingMode::REEL_SCROLLER)) {
+    if (next > static_cast<uint8_t>(Config::Settings::OperatingMode::OTA_UPDATE)) {
         next = static_cast<uint8_t>(Config::Settings::OperatingMode::AIR_MOUSE);
     }
     setOperatingMode(static_cast<Config::Settings::OperatingMode>(next));
@@ -136,6 +136,8 @@ const char* StateManager::getOperatingModeName(Config::Settings::OperatingMode m
             return "PRESENTATION (Mode 2: Presentation Remote Slide Clicker)";
         case Config::Settings::OperatingMode::REEL_SCROLLER:
             return "REEL_SCROLLER (Mode 3: Social Reel / Shorts Scroller)";
+        case Config::Settings::OperatingMode::OTA_UPDATE:
+            return "OTA_UPDATE (Mode 4: Wireless OTA Web Portal)";
         default:
             return "UNKNOWN_MODE";
     }

@@ -78,6 +78,9 @@ void Diagnostics::printOperatingMode(Config::Settings::OperatingMode mode) {
         case Config::Settings::OperatingMode::REEL_SCROLLER:
             Serial.println("[MODE] Active: REEL_SCROLLER (Mode 3: Social Reel / Shorts Scroller)");
             break;
+        case Config::Settings::OperatingMode::OTA_UPDATE:
+            Serial.println("[MODE] Active: OTA_UPDATE (Mode 4: Wireless OTA Web Portal)");
+            break;
         default:
             Serial.println("[MODE] Active: UNKNOWN");
             break;
@@ -194,6 +197,9 @@ uint8_t Diagnostics::processSerialCommands() {
         } else if (ch == '3') {
             Serial.println("[CMD] Mode 3 (Reel Scroller) selected via USB serial.");
             return 9;
+        } else if (ch == '4' || ch == 'o' || ch == 'O') {
+            Serial.println("[CMD] Mode 4 (Wireless OTA Web Portal) selected via USB serial.");
+            return 13;
         } else if (ch == 'a' || ch == 'A') {
             return 10;
         } else if (ch == 'b' || ch == 'B') {
@@ -205,7 +211,9 @@ uint8_t Diagnostics::processSerialCommands() {
             Serial.println("  '1' - Force Mode 1: Air Mouse");
             Serial.println("  '2' - Force Mode 2: Presentation Remote (Arrow Keys)");
             Serial.println("  '3' - Force Mode 3: Reel Scroller (Down/Up Arrow & Wheel)");
-            Serial.println("  'm' - Cycle operating mode (1 -> 2 -> 3 -> 1)");
+            Serial.println("  '4' - Force Mode 4: Wireless OTA Web Portal (Firmware Update)");
+            Serial.println("  'o' - Enter Wireless OTA Mode");
+            Serial.println("  'm' - Cycle operating mode (1 -> 2 -> 3 -> 4 -> 1)");
             Serial.println("  'a' - Test Left Mouse Click");
             Serial.println("  'b' - Test Right Mouse Click");
             Serial.println("  'k' - Test Reel/Presentation Key Action");

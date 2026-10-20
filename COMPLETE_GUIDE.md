@@ -62,6 +62,7 @@ The firmware automatically activates the ESP32-S3 internal pull-up resistors (`I
     1. **Mode 1: AIR_MOUSE** (LED 1 blink) — 6-Axis Desktop Air Mouse
     2. **Mode 2: PRESENTATION** (LED 2 blinks) — Slide Clicker Remote
     3. **Mode 3: REEL_SCROLLER** (LED 3 blinks) — TikTok / Reels / Shorts Scroller
+    4. **Mode 4: OTA_UPDATE** (LED 4 blinks) — Wireless OTA Web Portal
   - *Long Hold ($\ge 700\text{ ms}$):* Resets directly back to Mode 1 (Air Mouse)
 - **Button A (Action A):**
   - Pin 1 $\rightarrow$ **`GPIO 5`** (Right Header, Pin 3)
@@ -134,7 +135,8 @@ pio device monitor
 6. **Mode Switching (Mode Button GPIO 7 OR A+B Simultaneously):**
    - **Switch to Mode 2 (`PRESENTATION`):** Onboard LED flashes twice. Gyro cursor motion pauses (zero shake). Button A sends **Right Arrow** (`KEY_RIGHT_ARROW`), Button B sends **Left Arrow** (`KEY_LEFT_ARROW`). Long hold Button A launches fullscreen (`F5`).
    - **Switch to Mode 3 (`REEL_SCROLLER`):** Onboard LED flashes 3 times. Button A sends **Down Arrow** + Mouse Wheel Down (-5), Button B sends **Up Arrow** + Mouse Wheel Up (+5). Long hold Button A toggles Play/Pause (`SPACE`).
-   - **Switch back to Mode 1 (`AIR_MOUSE`):** Onboard LED flashes once. Gyro cursor movement immediately resumes!
+   - **Switch to Mode 4 (`OTA_UPDATE`):** Onboard LED flashes 4 times. BLE HID is paused and the Wi-Fi radio powers on, hosting SoftAP `Sentinal-OTA`.
+   - **Switch back to Mode 1 (`AIR_MOUSE`):** Onboard LED flashes once. Wi-Fi powers off and gyro cursor movement immediately resumes!
 
 ---
 
@@ -160,3 +162,27 @@ All commercial Bluetooth TikTok/Reels scroller rings (D01, E-Ring, etc.) require
    - **Tap Button A:** Instantly flings to the **Next Reel**.
    - **Tap Button B:** Instantly flings to the **Previous Reel**.
    - **Hold Button A ($\ge 700\text{ ms}$):** Double-taps the screen to **Heart / Like** the reel!
+
+---
+
+## 8. Wireless Firmware OTA Flashing Guide
+
+Sentinal enables wireless firmware upgrades over Wi-Fi without ever needing to plug back into a USB port.
+
+### Flash Partition Layout (`min_spiffs.csv`)
+- **`app0`**: 1.875 MB (Active Firmware Partition)
+- **`app1`**: 1.875 MB (Secondary OTA Staging Partition)
+- **`spiffs`**: 192 KB (Non-volatile storage)
+
+### Step-by-Step Wireless Upgrade:
+1. **Enter Mode 4:** Tap **Button Mode** on Sentinal until the LED flashes 4 times (or enter `'4'` / `'o'` in serial).
+2. **Connect to Wi-Fi:**
+   - Network Name: **`Sentinal-OTA`**
+   - Password: *None*
+3. **Open Portal:**
+   - In your browser, open **`http://192.168.4.1`** (or `http://sentinal.local`).
+   - The portal presents a minimalist black & white interface displaying device status, station connection, and an OTA firmware upload button.
+4. **Select & Flash:**
+   - Click **`SELECT FIRMWARE (.BIN)`** and pick `.pio/build/esp32-s3-devkitc-1/firmware.bin`.
+   - Click **`UPLOAD FIRMWARE`**.
+   - Watch the live percentage progress bar. Upon completion, the ESP32-S3 validates the binary, writes the new bootloader vector, and reboots automatically within 6 seconds.

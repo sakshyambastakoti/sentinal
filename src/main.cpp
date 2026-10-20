@@ -22,6 +22,7 @@
 #include "connectivity/ble_mouse.h"
 #include "system/state_manager.h"
 #include "system/diagnostics.h"
+#include "system/ota_manager.h"
 
 // =============================================================================
 // Static Component Instances
@@ -33,6 +34,7 @@ static Motion::MotionProcessor s_motionProcessor;
 static Connectivity::BLEMouse s_bleMouse;
 static System::StateManager   s_stateManager;
 static System::Diagnostics    s_diagnostics;
+static System::OTAManager     s_otaManager;
 
 // Timing variables (safe across millis() rollover)
 static uint32_t s_lastIMUSampleMs  = 0;
@@ -107,11 +109,21 @@ static void updateLEDs(uint32_t now) {
     }
 
     // -------------------------------------------------------------------------
-    // 3. Status LED (GPIO 3) & Onboard LED (GPIO 48): BLE Connection + Activity
+    // 3. Status LED (GPIO 3) & Onboard LED (GPIO 48): BLE Connection / OTA Status
     // -------------------------------------------------------------------------
     bool statusLedOn = false;
 
-    if (s_stateManager.getState() == System::SystemState::CALIBRATING) {
+    if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::OTA_UPDATE) {
+        if (s_otaManager.isStationConnected()) {
+            statusLedOn = true;
+        } else {
+            if ((now - s_lastBleBlinkMs) >= 200) {
+                s_lastBleBlinkMs = now;
+                s_bleBlinkState = !s_bleBlinkState;
+            }
+            statusLedOn = s_bleBlinkState;
+        }
+    } else if (s_stateManager.getState() == System::SystemState::CALIBRATING) {
         // Fast flicker during IMU calibration (80ms)
         if ((now - s_lastBleBlinkMs) >= 80) {
             s_lastBleBlinkMs = now;
@@ -189,6 +201,12 @@ static void handleModeChange(Config::Settings::OperatingMode oldMode, Config::Se
     } else {
         s_motionProcessor.setPaused(true);
     }
+
+    if (newMode == Config::Settings::OperatingMode::OTA_UPDATE) {
+        s_otaManager.begin();
+    } else if (oldMode == Config::Settings::OperatingMode::OTA_UPDATE) {
+        s_otaManager.stop();
+    }
 }
 
 static void handleBLEConnection(bool connected) {
@@ -258,7 +276,10 @@ void setup() {
     s_buttonManager.init(Config::Pins::BUTTON_A, Config::Pins::BUTTON_B, Config::Pins::BUTTON_MODE);
     triggerModeLEDs(s_stateManager.getOperatingMode());
 
-    // 5. Initialize I2C Bus and MPU6050 Motion Sensor
+    // 5. Initialize Wireless OTA Manager (load saved credentials)
+    s_otaManager.init();
+
+    // 6. Initialize I2C Bus and MPU6050 Motion Sensor
     Serial.println("[INIT] Initializing I2C bus and MPU6050...");
     if (!s_imuDriver.init(Config::Pins::I2C_SDA, Config::Pins::I2C_SCL, Config::Settings::I2C_CLOCK_SPEED_HZ)) {
         s_sensorErrorCount++;
@@ -300,6 +321,11 @@ void loop() {
     // -------------------------------------------------------------------------
     updateLEDs(now);
 
+    // Handle OTA Web Portal client requests when in OTA Mode
+    if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::OTA_UPDATE) {
+        s_otaManager.handleClient();
+    }
+
     // -------------------------------------------------------------------------
     // 1. Process USB Serial Diagnostic Commands ('d', 'r', 'm', 'i', 'x', 'y')
     // -------------------------------------------------------------------------
@@ -330,6 +356,8 @@ void loop() {
         setDeviceMode(Config::Settings::OperatingMode::PRESENTATION);
     } else if (cmd == 9) {
         setDeviceMode(Config::Settings::OperatingMode::REEL_SCROLLER);
+    } else if (cmd == 13) {
+        setDeviceMode(Config::Settings::OperatingMode::OTA_UPDATE);
     } else if (cmd == 10) {
         Serial.println("[CMD] Test Left Click");
         s_bleMouse.click(Connectivity::MOUSE_LEFT);
@@ -366,6 +394,11 @@ void loop() {
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
                     // Reel Scroller: Next Reel (Shorts, Reels, TikTok)
                     s_bleMouse.reelNext();
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::OTA_UPDATE) {
+                    Serial.printf("[OTA] Active. AP: '%s' (%s) | Station: %s\n",
+                                  Config::Settings::OTA_AP_SSID,
+                                  s_otaManager.getAPIP().c_str(),
+                                  s_otaManager.isStationConnected() ? s_otaManager.getStationIP().c_str() : "DISCONNECTED");
                 }
                 break;
 
@@ -381,6 +414,8 @@ void loop() {
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
                     // Reel Scroller: Previous Reel (Shorts, Reels, TikTok)
                     s_bleMouse.reelPrev();
+                } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::OTA_UPDATE) {
+                    Serial.println("[OTA] Portal active on port 80. Use Mode button to return to Air Mouse.");
                 }
                 break;
 

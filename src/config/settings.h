@@ -23,8 +23,17 @@ namespace Settings {
     enum class OperatingMode : uint8_t {
         AIR_MOUSE    = 0, // Mode 1: 6-Axis Air Mouse (Desktop PC / Mac)
         PRESENTATION = 1, // Mode 2: Presentation Remote (PowerPoint / Keynote / PDF)
-        REEL_SCROLLER= 2  // Mode 3: Mobile Reel / Short Scroller (Instagram / TikTok / YT)
+        REEL_SCROLLER= 2, // Mode 3: Mobile Reel / Short Scroller (Instagram / TikTok / YT)
+        OTA_UPDATE   = 3  // Mode 4: Wireless OTA Web Portal (Firmware Upload)
     };
+
+    // =========================================================================
+    // Wireless OTA Web Portal Settings
+    // =========================================================================
+    constexpr const char* OTA_AP_SSID      = "Sentinal-OTA";
+    constexpr const char* OTA_AP_PASS      = ""; // Open network for easy instant access
+    constexpr const char* OTA_MDNS_HOST    = "sentinal";
+    constexpr uint16_t    OTA_PORT         = 80;
 
     // =========================================================================
     // BLE HID Settings
