@@ -114,23 +114,27 @@ pio run --target upload
 pio device monitor
 ```
 
+> [!IMPORTANT]
+> **CRITICAL: Unpair / Forget "Sentinal" on your PC/Phone First!**
+> If you have paired Sentinal previously, the host OS has cached the old single-mouse GATT table. Go into Bluetooth Settings on your PC or phone, select **"Remove device" / "Unpair"**, and pair anew. This tells the OS to discover the new composite Keyboard & Mouse reports so arrow keys and reel controls work!
+
 ---
 
 ## 6. Quick Functional Acceptance Checklist
 
-1. **Boot Test:** Open the serial monitor at 115200 baud. You should see the startup banner showing Pins, active Mode 1 (`AIR_MOUSE`), MPU6050 address `0x68`, and calibration completion.
+1. **Boot Test:** Open the serial monitor at 115200 baud (`pio device monitor`). You will see the startup banner displaying pinout, detected MPU6050 address `0x68`, and calibration completion. The **Onboard LED (GPIO 48)** flashes 1x to confirm Mode 1 (`AIR_MOUSE`).
 2. **Corrected Cursor Motion:**
    - Tilt UP $\rightarrow$ Cursor moves UP.
    - Tilt DOWN $\rightarrow$ Cursor moves DOWN.
    - Rotate LEFT $\rightarrow$ Cursor moves LEFT.
    - Rotate RIGHT $\rightarrow$ Cursor moves RIGHT.
-3. **Stationary Test:** Rest the board on a flat table. The cursor should stay completely stationary with zero drift or jitter.
-4. **Left / Right Click (Air Mouse Mode):** Tap Button A for left click; tap Button B for right click.
+3. **Stationary Test:** Rest the board on a flat table. The cursor stays completely stationary with zero drift or jitter.
+4. **Left / Right Click (Air Mouse Mode):** Tap Button A for left click; tap Button B for right click (held for solid 35ms pulse for guaranteed OS detection).
 5. **Motion Pause:** Press and hold Button A for $\ge 700\text{ ms}$. Cursor freezes for wrist repositioning. Long press Button A again to resume.
-6. **Mode Switching Button (GPIO 7):**
-   - **Tap Button Mode:** Switches to Mode 2 (`PRESENTATION`). LED blinks twice. Air mouse motion is paused. Button A sends Next Slide (`PAGE_DOWN`), Button B sends Previous Slide (`PAGE_UP`).
-   - **Tap Button Mode again:** Switches to Mode 3 (`REEL_SCROLLER`). LED blinks 3 times. Button A scrolls down to the next reel, Button B scrolls up to the previous reel.
-   - **Hold Button Mode ($\ge 700\text{ ms}$):** Instantly resets back to Mode 1 (`AIR_MOUSE`). LED blinks once, air mouse cursor movement reactivates immediately!
+6. **Mode Switching (Mode Button GPIO 7 OR A+B Simultaneously):**
+   - **Switch to Mode 2 (`PRESENTATION`):** Onboard LED flashes twice. Gyro cursor motion pauses (zero shake). Button A sends **Right Arrow** (`KEY_RIGHT_ARROW`), Button B sends **Left Arrow** (`KEY_LEFT_ARROW`). Long hold Button A launches fullscreen (`F5`).
+   - **Switch to Mode 3 (`REEL_SCROLLER`):** Onboard LED flashes 3 times. Button A sends **Down Arrow** + Mouse Wheel Down (-5), Button B sends **Up Arrow** + Mouse Wheel Up (+5). Long hold Button A toggles Play/Pause (`SPACE`).
+   - **Switch back to Mode 1 (`AIR_MOUSE`):** Onboard LED flashes once. Gyro cursor movement immediately resumes!
 
 ---
 

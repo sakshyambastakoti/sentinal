@@ -41,7 +41,7 @@ static const uint8_t hidReportMap[] = {
     0xc0,                          // END_COLLECTION
 
     // -------------------------------------------------------------------------
-    // Report ID 2: Keyboard (Standard 6-Key Rollover + Modifiers)
+    // Report ID 2: Keyboard (Standard 6-Key Rollover + Modifiers + Output LEDs)
     // -------------------------------------------------------------------------
     0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
     0x09, 0x06,                    // USAGE (Keyboard)
@@ -58,13 +58,22 @@ static const uint8_t hidReportMap[] = {
     0x95, 0x01,                    //   REPORT_COUNT (1)
     0x75, 0x08,                    //   REPORT_SIZE (8)
     0x81, 0x03,                    //   INPUT (Cnst,Var,Abs) - Reserved Byte
+    0x95, 0x05,                    //   REPORT_COUNT (5)
+    0x75, 0x01,                    //   REPORT_SIZE (1)
+    0x05, 0x08,                    //   USAGE_PAGE (LEDs)
+    0x19, 0x01,                    //   USAGE_MINIMUM (Num Lock)
+    0x29, 0x05,                    //   USAGE_MAXIMUM (Kana)
+    0x91, 0x02,                    //   OUTPUT (Data,Var,Abs) - LED Output Report
+    0x95, 0x01,                    //   REPORT_COUNT (1)
+    0x75, 0x03,                    //   REPORT_SIZE (3)
+    0x91, 0x03,                    //   OUTPUT (Cnst,Var,Abs) - LED Padding
     0x95, 0x06,                    //   REPORT_COUNT (6)
     0x75, 0x08,                    //   REPORT_SIZE (8)
     0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
-    0x25, 0x65,                    //   LOGICAL_MAXIMUM (101)
+    0x25, 0x73,                    //   LOGICAL_MAXIMUM (115)
     0x05, 0x07,                    //   USAGE_PAGE (Keyboard/Keypad)
     0x19, 0x00,                    //   USAGE_MINIMUM (0)
-    0x29, 0x65,                    //   USAGE_MAXIMUM (101)
+    0x29, 0x73,                    //   USAGE_MAXIMUM (115)
     0x81, 0x00,                    //   INPUT (Data,Ary,Abs) - 6 Key Array
     0xc0,                          // END_COLLECTION
 
@@ -90,6 +99,7 @@ BLEMouse::BLEMouse()
       _pHid(nullptr),
       _pInputReport(nullptr),
       _pInputReportKeyboard(nullptr),
+      _pOutputReportKeyboard(nullptr),
       _pInputReportConsumer(nullptr),
       _isConnected(false),
       _currentButtons(0),
@@ -122,9 +132,10 @@ void BLEMouse::begin(const char* deviceName, const char* manufacturer) {
     _pHid->hidInfo(0x00, 0x01);
     _pHid->setBatteryLevel(Config::Settings::BLE_BATTERY_LVL);
 
-    _pInputReport         = _pHid->inputReport(1);
-    _pInputReportKeyboard = _pHid->inputReport(2);
-    _pInputReportConsumer = _pHid->inputReport(3);
+    _pInputReport          = _pHid->inputReport(1);
+    _pInputReportKeyboard  = _pHid->inputReport(2);
+    _pOutputReportKeyboard = _pHid->outputReport(2);
+    _pInputReportConsumer  = _pHid->inputReport(3);
 
     _pHid->startServices();
 
@@ -232,7 +243,7 @@ void BLEMouse::release(uint8_t button) {
 
 void BLEMouse::click(uint8_t button) {
     press(button);
-    delay(15);
+    delay(35);
     release(button);
 }
 
@@ -309,15 +320,21 @@ void BLEMouse::swipeDown(int16_t distance) {
 
 void BLEMouse::sendKey(uint8_t keycode, uint8_t modifier) {
     if (!_isConnected || _pInputReportKeyboard == nullptr) {
+        Serial.println("[BLE] sendKey ignored: Not connected or keyboard report null");
         return;
+    }
+    uint8_t subscribers = _pInputReportKeyboard->getSubscribedCount();
+    if (subscribers == 0) {
+        Serial.println("[BLE_WARN] Keyboard report has no host subscribers! Unpair and re-pair 'Sentinal' in Bluetooth settings.");
     }
     uint8_t keyReport[8] = {modifier, 0, keycode, 0, 0, 0, 0, 0};
     _pInputReportKeyboard->setValue(keyReport, sizeof(keyReport));
     _pInputReportKeyboard->notify();
-    delay(15);
+    delay(20);
     memset(keyReport, 0, sizeof(keyReport));
     _pInputReportKeyboard->setValue(keyReport, sizeof(keyReport));
     _pInputReportKeyboard->notify();
+    delay(10);
 }
 
 void BLEMouse::sendConsumer(uint16_t usage) {
@@ -330,11 +347,12 @@ void BLEMouse::sendConsumer(uint16_t usage) {
     };
     _pInputReportConsumer->setValue(consumerReport, sizeof(consumerReport));
     _pInputReportConsumer->notify();
-    delay(15);
+    delay(20);
     consumerReport[0] = 0;
     consumerReport[1] = 0;
     _pInputReportConsumer->setValue(consumerReport, sizeof(consumerReport));
     _pInputReportConsumer->notify();
+    delay(10);
 }
 
 void BLEMouse::releaseAll() {

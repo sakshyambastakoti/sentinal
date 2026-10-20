@@ -124,6 +124,7 @@ private:
     NimBLEHIDDevice*      _pHid;
     NimBLECharacteristic* _pInputReport;
     NimBLECharacteristic* _pInputReportKeyboard;
+    NimBLECharacteristic* _pOutputReportKeyboard;
     NimBLECharacteristic* _pInputReportConsumer;
     bool                  _isConnected;
     uint8_t               _currentButtons;

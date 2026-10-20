@@ -185,11 +185,32 @@ uint8_t Diagnostics::processSerialCommands() {
             return 5;
         } else if (ch == 'y' || ch == 'Y') {
             return 6;
+        } else if (ch == '1') {
+            Serial.println("[CMD] Mode 1 (Air Mouse) selected via USB serial.");
+            return 7;
+        } else if (ch == '2') {
+            Serial.println("[CMD] Mode 2 (Presentation Remote) selected via USB serial.");
+            return 8;
+        } else if (ch == '3') {
+            Serial.println("[CMD] Mode 3 (Reel Scroller) selected via USB serial.");
+            return 9;
+        } else if (ch == 'a' || ch == 'A') {
+            return 10;
+        } else if (ch == 'b' || ch == 'B') {
+            return 11;
+        } else if (ch == 'k' || ch == 'K') {
+            return 12;
         } else if (ch == 'h' || ch == 'H') {
             Serial.println("[CMD] Available commands:");
+            Serial.println("  '1' - Force Mode 1: Air Mouse");
+            Serial.println("  '2' - Force Mode 2: Presentation Remote (Arrow Keys)");
+            Serial.println("  '3' - Force Mode 3: Reel Scroller (Down/Up Arrow & Wheel)");
+            Serial.println("  'm' - Cycle operating mode (1 -> 2 -> 3 -> 1)");
+            Serial.println("  'a' - Test Left Mouse Click");
+            Serial.println("  'b' - Test Right Mouse Click");
+            Serial.println("  'k' - Test Reel/Presentation Key Action");
             Serial.println("  'd' - Toggle motion telemetry stream");
             Serial.println("  'r' - Initiate stationary gyro recalibration");
-            Serial.println("  'm' - Cycle operating mode (Air Mouse -> Presentation -> Reel Scroller)");
             Serial.println("  'i' - Toggle both axes inversion (Invert X & Y)");
             Serial.println("  'x' - Toggle X-axis inversion specifically");
             Serial.println("  'y' - Toggle Y-axis inversion specifically");

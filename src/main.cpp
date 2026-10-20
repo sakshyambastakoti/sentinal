@@ -62,6 +62,7 @@ static void triggerModeLEDs(Config::Settings::OperatingMode mode) {
     s_lastModeToggleMs = millis();
     s_modeLedState = true;
     digitalWrite(Config::Pins::MODE_LED, HIGH);
+    digitalWrite(Config::Pins::ONBOARD_LED, LOW); // Active-LOW on Super Mini: LOW turns it ON!
 }
 
 static void triggerActionLED(uint16_t durationMs = 80) {
@@ -72,18 +73,22 @@ static void triggerActionLED(uint16_t durationMs = 80) {
 
 static void updateLEDs(uint32_t now) {
     // -------------------------------------------------------------------------
-    // 1. Mode LED (GPIO 4): Burst blinks strictly on mode changes
+    // 1. Mode LED (GPIO 4) & Onboard LED (GPIO 48): Burst blinks on mode changes
     // -------------------------------------------------------------------------
     if (s_modeBlinksRemaining > 0) {
         if ((now - s_lastModeToggleMs) >= 120) {
             s_lastModeToggleMs = now;
             s_modeLedState = !s_modeLedState;
             digitalWrite(Config::Pins::MODE_LED, s_modeLedState ? HIGH : LOW);
+            digitalWrite(Config::Pins::ONBOARD_LED, s_modeLedState ? LOW : HIGH); // Active-LOW
             s_modeBlinksRemaining--;
             if (s_modeBlinksRemaining == 0) {
                 digitalWrite(Config::Pins::MODE_LED, LOW);
+                digitalWrite(Config::Pins::ONBOARD_LED, HIGH); // Off
             }
         }
+        // While blinking mode bursts, do not let Status LED logic overwrite the onboard LED!
+        return;
     }
 
     // -------------------------------------------------------------------------
@@ -133,6 +138,14 @@ static void updateLEDs(uint32_t now) {
     digitalWrite(Config::Pins::ONBOARD_LED, statusLedOn ? LOW : HIGH); // Active-LOW on Super Mini
 }
 
+static void setDeviceMode(Config::Settings::OperatingMode mode) {
+    s_stateManager.setOperatingMode(mode);
+    Serial.printf("\n[MODE] Operating Mode set to: %s\n", s_stateManager.getCurrentOperatingModeName());
+    s_bleMouse.releaseAll();
+    s_motionProcessor.reset();
+    triggerModeLEDs(mode);
+}
+
 static void cycleDeviceMode() {
     Config::Settings::OperatingMode newMode = s_stateManager.cycleOperatingMode();
     Serial.printf("\n[MODE] Operating Mode switched to: %s\n", s_stateManager.getCurrentOperatingModeName());
@@ -142,11 +155,7 @@ static void cycleDeviceMode() {
 }
 
 static void resetDeviceMode() {
-    s_stateManager.setOperatingMode(Config::Settings::OperatingMode::AIR_MOUSE);
-    Serial.printf("\n[MODE] Operating Mode reset to default: %s\n", s_stateManager.getCurrentOperatingModeName());
-    s_bleMouse.releaseAll();
-    s_motionProcessor.reset();
-    triggerModeLEDs(Config::Settings::OperatingMode::AIR_MOUSE);
+    setDeviceMode(Config::Settings::OperatingMode::AIR_MOUSE);
 }
 
 // =============================================================================
@@ -315,6 +324,26 @@ void loop() {
         Serial.printf("[CMD] Invert Y -> Invert X: %s | Invert Y: %s\n",
                       s_motionProcessor.isInvertX() ? "TRUE" : "FALSE",
                       s_motionProcessor.isInvertY() ? "TRUE" : "FALSE");
+    } else if (cmd == 7) {
+        setDeviceMode(Config::Settings::OperatingMode::AIR_MOUSE);
+    } else if (cmd == 8) {
+        setDeviceMode(Config::Settings::OperatingMode::PRESENTATION);
+    } else if (cmd == 9) {
+        setDeviceMode(Config::Settings::OperatingMode::REEL_SCROLLER);
+    } else if (cmd == 10) {
+        Serial.println("[CMD] Test Left Click");
+        s_bleMouse.click(Connectivity::MOUSE_LEFT);
+    } else if (cmd == 11) {
+        Serial.println("[CMD] Test Right Click");
+        s_bleMouse.click(Connectivity::MOUSE_RIGHT);
+    } else if (cmd == 12) {
+        Serial.println("[CMD] Test Key Action");
+        if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
+            s_bleMouse.sendKey(Connectivity::KeyCode::KEY_RIGHT_ARROW);
+        } else {
+            s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
+            s_bleMouse.scroll(-5);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -339,10 +368,11 @@ void loop() {
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_RIGHT_ARROW);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Next Reel (Down Arrow Shortcut - instant, zero cursor displacement)
+                    // Reel Scroller: Next Reel (Down Arrow + Wheel Scroll Down)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Down Arrow)");
+                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Down Arrow + Wheel Down)");
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
+                        s_bleMouse.scroll(-5); // Dual-action fallback works across Desktop, Android, iOS
                     }
                 }
                 break;
@@ -360,10 +390,11 @@ void loop() {
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_LEFT_ARROW);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Previous Reel (Up Arrow Shortcut - instant, zero cursor displacement)
+                    // Reel Scroller: Previous Reel (Up Arrow + Wheel Scroll Up)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Up Arrow)");
+                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Up Arrow + Wheel Up)");
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_UP_ARROW);
+                        s_bleMouse.scroll(5); // Dual-action fallback works across Desktop, Android, iOS
                     }
                 }
                 break;

@@ -90,8 +90,13 @@ Engineered specifically for the **ESP32-S3FH4R2 Super Mini**:
 
 - **Advertised Bluetooth Name:** **`Sentinal`**
 - **Manufacturer:** **`Sentinal`**
-- **Appearance:** `0x03C2` (Standard HID Mouse — required for native pointer routing on iOS and Android)
+- **Appearance:** `0x03C0` (Generic HID — enables Composite Mouse + Keyboard HID drivers across Windows, Mac, Android, and iOS)
 - **Security:** BLE "Just Works" pairing with persistent bonded encryption keys.
+
+> [!IMPORTANT]
+> **CRITICAL FIRST-TIME STEP (Host Bluetooth GATT Cache Invalidation):**
+> If you have previously connected Sentinal to your PC, Mac, or phone, your host operating system has cached the old single-device mouse GATT table.
+> You **MUST** open your host's Bluetooth settings, click **"Remove device" / "Unpair"** on `Sentinal`, and re-pair fresh. This forces Windows/macOS/Android to enumerate the new composite Keyboard + Mouse descriptor so presentation keys and reel controls function properly!
 
 ### Pairing with Host Devices:
 1. Power on Sentinal or plug into USB-C.
@@ -102,7 +107,22 @@ Engineered specifically for the **ESP32-S3FH4R2 Super Mini**:
 
 ---
 
-## 4. Apple iPhone / iOS Setup (AssistiveTouch)
+## 4. Operating Modes & Controls
+
+Sentinal supports 3 deterministic operating modes. When mode changes, the **Onboard LED (GPIO 48)** and **Mode LED (GPIO 4)** flash in bursts (**1x = Air Mouse, 2x = Presentation, 3x = Reels**):
+
+| Feature / Action | Mode 1: Air Mouse (1 Blink) | Mode 2: Presentation Remote (2 Blinks) | Mode 3: Reel Scroller (3 Blinks) |
+|:---|:---|:---|:---|
+| **Gyro Cursor Motion** | Active (Wrist-driven pointer) | Paused (Zero shake on slides) | Paused (Zero cursor displacement) |
+| **Button A (Tap)** | Left Mouse Click | Next Slide (`RIGHT_ARROW` + `PAGE_DOWN`) | Next Reel (`DOWN_ARROW` + Wheel Down) |
+| **Button B (Tap)** | Right Mouse Click | Previous Slide (`LEFT_ARROW` + `PAGE_UP`) | Previous Reel (`UP_ARROW` + Wheel Up) |
+| **Button A (Hold $\ge 700$ms)** | Toggle Pointer Motion Pause | Start / Resume Slideshow (`F5`) | Play / Pause Video (`SPACE`) |
+| **Button B (Hold $\ge 700$ms)** | Stationary Gyro Recalibration | Stationary Gyro Recalibration | Stationary Gyro Recalibration |
+| **Mode Switch** | Tap Mode Btn (or A+B simultaneously) | Tap Mode Btn (or A+B simultaneously) | Tap Mode Btn (or A+B simultaneously) |
+
+---
+
+## 5. Apple iPhone / iOS Setup (AssistiveTouch)
 
 On iOS, Apple requires AssistiveTouch to be enabled for apps like Instagram and TikTok to accept touch scroll gestures:
 
@@ -110,20 +130,26 @@ On iOS, Apple requires AssistiveTouch to be enabled for apps like Instagram and 
 2. Toggle **AssistiveTouch** to **ON**.
 3. In the same menu, verify **Perform Touch Gestures** is **ON**.
 4. Adjust **Tracking Sensitivity** to approximately **30%** (about 1/3 speed).
-5. Switch Sentinal to **Mode 3 (Reel Scroller)** by tapping **Button Mode** until the LED flashes 3 times.
+5. Switch Sentinal to **Mode 3 (Reel Scroller)** by tapping **Button Mode** (or pressing A+B simultaneously) until the LED flashes 3 times.
 6. Open Instagram Reels, TikTok, or YouTube Shorts and tap Button A or B to scroll seamlessly!
 
 ---
 
-## 5. USB Serial Telemetry & Diagnostics
+## 6. USB Serial Telemetry & Diagnostics
 
 Sentinal provides continuous diagnostics over hardware USB CDC Serial at **115200 baud**:
 
 | Command Key | Action | Description |
 |:------------|:-------|:------------|
+| `'1'` | Force Mode 1 | Instantly sets Air Mouse mode. |
+| `'2'` | Force Mode 2 | Instantly sets Presentation Remote mode. |
+| `'3'` | Force Mode 3 | Instantly sets Reel Scroller mode. |
+| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Air Mouse $\rightarrow$ Presentation $\rightarrow$ Reels. |
+| `'a'` / `'A'` | Test Left Click | Sends a Left Mouse Click report over BLE. |
+| `'b'` / `'B'` | Test Right Click | Sends a Right Mouse Click report over BLE. |
+| `'k'` / `'K'` | Test Key Action | Tests active mode keyboard/wheel action. |
 | `'d'` / `'D'` | Toggle Debug Stream | Streams live gyro rates and HID `dx`/`dy` deltas. |
 | `'r'` / `'R'` | Stationary Recalibrate | Triggers 2-second zero-rate gyro offset calibration. |
-| `'m'` / `'M'` | Cycle Operating Mode | Programmatically cycles Air Mouse $\rightarrow$ Presentation $\rightarrow$ Reels. |
 | `'i'` / `'I'` | Invert Both Axes | Toggles inversion for both X and Y simultaneously. |
 | `'x'` / `'X'` | Toggle Invert X | Flips horizontal axis direction on the fly. |
 | `'y'` / `'Y'` | Toggle Invert Y | Flips vertical axis direction on the fly. |
