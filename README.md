@@ -114,8 +114,8 @@ Sentinal supports 3 deterministic operating modes. When mode changes, the **Onbo
 | Feature / Action | Mode 1: Air Mouse (1 Blink) | Mode 2: Presentation Remote (2 Blinks) | Mode 3: Reel Scroller (3 Blinks) |
 |:---|:---|:---|:---|
 | **Gyro Cursor Motion** | Active (Wrist-driven pointer) | Paused (Zero shake on slides) | Paused (Zero cursor displacement) |
-| **Button A (Tap)** | Left Mouse Click | Next Slide (`RIGHT_ARROW` + `PAGE_DOWN`) | Next Reel (`DOWN_ARROW` + Wheel Down) |
-| **Button B (Tap)** | Right Mouse Click | Previous Slide (`LEFT_ARROW` + `PAGE_UP`) | Previous Reel (`UP_ARROW` + Wheel Up) |
+| **Button A (Tap)** | Left Mouse Click | Next Slide (`PAGE_DOWN` / Left Click Fallback for Canva & PowerPoint) | Next Reel (`DOWN_ARROW` + Wheel Down) |
+| **Button B (Tap)** | Right Mouse Click | Previous Slide (`PAGE_UP` / Wheel Up Fallback for Canva & PowerPoint) | Previous Reel (`UP_ARROW` + Wheel Up) |
 | **Button A (Hold $\ge 700$ms)** | Toggle Pointer Motion Pause | Start / Resume Slideshow (`F5`) | Play / Pause Video (`SPACE`) |
 | **Button B (Hold $\ge 700$ms)** | Stationary Gyro Recalibration | Stationary Gyro Recalibration | Stationary Gyro Recalibration |
 | **Mode Switch** | Tap Mode Btn (or A+B simultaneously) | Tap Mode Btn (or A+B simultaneously) | Tap Mode Btn (or A+B simultaneously) |

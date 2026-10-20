@@ -337,12 +337,11 @@ void loop() {
         Serial.println("[CMD] Test Right Click");
         s_bleMouse.click(Connectivity::MOUSE_RIGHT);
     } else if (cmd == 12) {
-        Serial.println("[CMD] Test Key Action");
+        Serial.println("[CMD] Test Active Mode Action");
         if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
-            s_bleMouse.sendKey(Connectivity::KeyCode::KEY_RIGHT_ARROW);
+            s_bleMouse.presentationNext();
         } else {
-            s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
-            s_bleMouse.scroll(-5);
+            s_bleMouse.reelNext();
         }
     }
 
@@ -362,18 +361,11 @@ void loop() {
                         s_bleMouse.click(Connectivity::MOUSE_LEFT);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
-                    // Presentation: Next Slide (Side Right Arrow)
-                    if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Presentation -> Next Slide (Right Arrow)");
-                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_RIGHT_ARROW);
-                    }
+                    // Presentation: Next Slide (Canva, PowerPoint, Google Slides)
+                    s_bleMouse.presentationNext();
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Next Reel (Down Arrow + Wheel Scroll Down)
-                    if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Down Arrow + Wheel Down)");
-                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
-                        s_bleMouse.scroll(-5); // Dual-action fallback works across Desktop, Android, iOS
-                    }
+                    // Reel Scroller: Next Reel (Shorts, Reels, TikTok)
+                    s_bleMouse.reelNext();
                 }
                 break;
 
@@ -384,18 +376,11 @@ void loop() {
                         s_bleMouse.click(Connectivity::MOUSE_RIGHT);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
-                    // Presentation: Previous Slide (Side Left Arrow)
-                    if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Presentation -> Previous Slide (Left Arrow)");
-                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_LEFT_ARROW);
-                    }
+                    // Presentation: Previous Slide (Canva, PowerPoint, Google Slides)
+                    s_bleMouse.presentationPrev();
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Previous Reel (Up Arrow + Wheel Scroll Up)
-                    if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Up Arrow + Wheel Up)");
-                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_UP_ARROW);
-                        s_bleMouse.scroll(5); // Dual-action fallback works across Desktop, Android, iOS
-                    }
+                    // Reel Scroller: Previous Reel (Shorts, Reels, TikTok)
+                    s_bleMouse.reelPrev();
                 }
                 break;
 

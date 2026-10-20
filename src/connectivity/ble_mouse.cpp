@@ -57,7 +57,7 @@ static const uint8_t hidReportMap[] = {
     0x81, 0x02,                    //   INPUT (Data,Var,Abs) - Modifier Byte
     0x95, 0x01,                    //   REPORT_COUNT (1)
     0x75, 0x08,                    //   REPORT_SIZE (8)
-    0x81, 0x03,                    //   INPUT (Cnst,Var,Abs) - Reserved Byte
+    0x81, 0x01,                    //   INPUT (Cnst,Ary,Abs) - Reserved Byte (0x01)
     0x95, 0x05,                    //   REPORT_COUNT (5)
     0x75, 0x01,                    //   REPORT_SIZE (1)
     0x05, 0x08,                    //   USAGE_PAGE (LEDs)
@@ -66,14 +66,14 @@ static const uint8_t hidReportMap[] = {
     0x91, 0x02,                    //   OUTPUT (Data,Var,Abs) - LED Output Report
     0x95, 0x01,                    //   REPORT_COUNT (1)
     0x75, 0x03,                    //   REPORT_SIZE (3)
-    0x91, 0x03,                    //   OUTPUT (Cnst,Var,Abs) - LED Padding
+    0x91, 0x01,                    //   OUTPUT (Cnst,Ary,Abs) - LED Padding (0x01)
     0x95, 0x06,                    //   REPORT_COUNT (6)
     0x75, 0x08,                    //   REPORT_SIZE (8)
     0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
-    0x25, 0x73,                    //   LOGICAL_MAXIMUM (115)
+    0x25, 0x65,                    //   LOGICAL_MAXIMUM (101 keys)
     0x05, 0x07,                    //   USAGE_PAGE (Keyboard/Keypad)
     0x19, 0x00,                    //   USAGE_MINIMUM (0)
-    0x29, 0x73,                    //   USAGE_MAXIMUM (115)
+    0x29, 0x65,                    //   USAGE_MAXIMUM (101)
     0x81, 0x00,                    //   INPUT (Data,Ary,Abs) - 6 Key Array
     0xc0,                          // END_COLLECTION
 
@@ -112,8 +112,8 @@ void BLEMouse::begin(const char* deviceName, const char* manufacturer) {
     // =========================================================================
     // Universal BLE HID Security & Bonding Configuration (PC & Smartphone)
     // =========================================================================
-    // Standard Just Works bonding enables compatibility with Android, iOS, Windows, Mac.
-    NimBLEDevice::setSecurityAuth(true, false, false);
+    // Standard Just Works bonding + Secure Connections for Windows 10/11 HID Keyboard compatibility
+    NimBLEDevice::setSecurityAuth(true, false, true);
 
     // 2. IO Capability: No Input, No Output (standard for mouse/pointer devices)
     NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
@@ -249,7 +249,8 @@ void BLEMouse::click(uint8_t button) {
 
 void BLEMouse::scroll(int8_t wheel) {
     sendReport(_currentButtons, 0, 0, wheel);
-    sendReport(_currentButtons, 0, 0, 0); // Crucial: Immediately reset relative wheel delta to 0
+    delay(25);
+    sendReport(_currentButtons, 0, 0, 0); // Crucial: Reset relative wheel delta to 0 after hold
 }
 
 void BLEMouse::swipeUp(int16_t distance) {
@@ -330,11 +331,53 @@ void BLEMouse::sendKey(uint8_t keycode, uint8_t modifier) {
     uint8_t keyReport[8] = {modifier, 0, keycode, 0, 0, 0, 0, 0};
     _pInputReportKeyboard->setValue(keyReport, sizeof(keyReport));
     _pInputReportKeyboard->notify();
-    delay(20);
+    delay(65); // Solid 65ms hold so BLE central connection interval reliably captures the key down
     memset(keyReport, 0, sizeof(keyReport));
     _pInputReportKeyboard->setValue(keyReport, sizeof(keyReport));
     _pInputReportKeyboard->notify();
-    delay(10);
+    delay(25); // 25ms release delay before next report
+}
+
+void BLEMouse::presentationNext() {
+    if (!_isConnected) return;
+    if (_pInputReportKeyboard != nullptr && _pInputReportKeyboard->getSubscribedCount() > 0) {
+        // Host has subscribed to keyboard: send universal Page Down (Logitech presentation standard)
+        Serial.println("[ACTION] Presentation -> Next Slide (Keyboard Page Down)");
+        sendKey(KeyCode::KEY_PAGE_DOWN);
+    } else {
+        // Fallback: If keyboard not yet subscribed by host, use Left Click (universal slide advance in Canva & PowerPoint)
+        Serial.println("[ACTION] Presentation -> Next Slide (Mouse Left Click Fallback)");
+        click(MOUSE_LEFT);
+    }
+}
+
+void BLEMouse::presentationPrev() {
+    if (!_isConnected) return;
+    if (_pInputReportKeyboard != nullptr && _pInputReportKeyboard->getSubscribedCount() > 0) {
+        // Host has subscribed to keyboard: send universal Page Up
+        Serial.println("[ACTION] Presentation -> Previous Slide (Keyboard Page Up)");
+        sendKey(KeyCode::KEY_PAGE_UP);
+    } else {
+        // Fallback: If keyboard not yet subscribed by host, use Wheel Up
+        Serial.println("[ACTION] Presentation -> Previous Slide (Wheel Up Fallback)");
+        scroll(2);
+    }
+}
+
+void BLEMouse::reelNext() {
+    if (!_isConnected) return;
+    if (_pInputReportKeyboard != nullptr && _pInputReportKeyboard->getSubscribedCount() > 0) {
+        sendKey(KeyCode::KEY_DOWN_ARROW);
+    }
+    scroll(-5);
+}
+
+void BLEMouse::reelPrev() {
+    if (!_isConnected) return;
+    if (_pInputReportKeyboard != nullptr && _pInputReportKeyboard->getSubscribedCount() > 0) {
+        sendKey(KeyCode::KEY_UP_ARROW);
+    }
+    scroll(5);
 }
 
 void BLEMouse::sendConsumer(uint16_t usage) {

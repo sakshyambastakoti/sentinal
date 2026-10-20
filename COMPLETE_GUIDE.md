@@ -67,13 +67,13 @@ The firmware automatically activates the ESP32-S3 internal pull-up resistors (`I
   - Pin 1 $\rightarrow$ **`GPIO 5`** (Right Header, Pin 3)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
   - *Air Mouse Mode:* Left Click (tap) / Pause-Resume motion (hold)
-  - *Presentation Mode:* Next Slide (Side **`RIGHT_ARROW`**) / Fullscreen slideshow (`F5` hold)
-  - *Reel Scroller Mode:* Next Reel (**`DOWN_ARROW`** shortcut, zero cursor movement) / Play-Pause (`SPACE` hold)
+  - *Presentation Mode:* Next Slide (**`PAGE_DOWN`** / Left Click Fallback for Canva & PowerPoint) / Fullscreen slideshow (`F5` hold)
+  - *Reel Scroller Mode:* Next Reel (**`DOWN_ARROW`** + Wheel Down) / Play-Pause (`SPACE` hold)
 - **Button B (Action B):**
   - Pin 1 $\rightarrow$ **`GPIO 6`** (Right Header, Pin 2)
   - Pin 2 $\rightarrow$ **`GND`** (Left Header, Pin 2)
   - *Air Mouse Mode:* Right Click (tap) / Stationary Recalibration (hold)
-  - *Presentation Mode:* Previous Slide (Side **`LEFT_ARROW`**) / Stationary Recalibration (hold)
+  - *Presentation Mode:* Previous Slide (**`PAGE_UP`** / Wheel Up Fallback for Canva & PowerPoint) / Stationary Recalibration (hold)
   - *Reel Scroller Mode:* Previous Reel (**`UP_ARROW`** shortcut, zero cursor movement) / Stationary Recalibration (hold)
 
 *All 3 buttons connect between their respective GPIO and common GND. No external resistors or capacitors are needed.*

@@ -106,6 +106,34 @@ public:
     void sendKey(uint8_t keycode, uint8_t modifier = 0);
 
     /**
+     * @brief Slide advance for Presentation Remote (PowerPoint, Canva, Keynote, Google Slides).
+     *        Sends PageDown/RightArrow with automatic Left Click fallback.
+     */
+    void presentationNext();
+
+    /**
+     * @brief Slide back for Presentation Remote (PowerPoint, Canva, Keynote, Google Slides).
+     *        Sends PageUp/LeftArrow with automatic Wheel Up fallback.
+     */
+    void presentationPrev();
+
+    /**
+     * @brief Next reel for Reel Scroller mode (Shorts / Reels / TikTok).
+     *        Sends Down Arrow + Wheel Scroll Down.
+     */
+    void reelNext();
+
+    /**
+     * @brief Previous reel for Reel Scroller mode (Shorts / Reels / TikTok).
+     *        Sends Up Arrow + Wheel Scroll Up.
+     */
+    void reelPrev();
+
+    bool isKeyboardSubscribed() const {
+        return (_pInputReportKeyboard != nullptr && _pInputReportKeyboard->getSubscribedCount() > 0);
+    }
+
+    /**
      * @brief Send consumer control media key press and release.
      */
     void sendConsumer(uint16_t usage);
