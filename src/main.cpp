@@ -333,18 +333,15 @@ void loop() {
                         s_bleMouse.click(Connectivity::MOUSE_LEFT);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
-                    // Presentation: Next Slide (PAGE_DOWN)
+                    // Presentation: Next Slide (Side Right Arrow)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Presentation -> Next Slide (PAGE_DOWN)");
-                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_PAGE_DOWN);
+                        Serial.println("[ACTION] Presentation -> Next Slide (Right Arrow)");
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_RIGHT_ARROW);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Next Reel (Touch swipe up for mobile apps + wheel + arrow key)
+                    // Reel Scroller: Next Reel (Down Arrow Shortcut - instant, zero cursor displacement)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Swipe Up + Wheel + Down Arrow)");
-                        s_bleMouse.swipeUp(360);
-                        delay(40);
-                        s_bleMouse.scroll(-3);
+                        Serial.println("[ACTION] Reel Scroller -> Next Reel (Down Arrow)");
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_DOWN_ARROW);
                     }
                 }
@@ -357,18 +354,15 @@ void loop() {
                         s_bleMouse.click(Connectivity::MOUSE_RIGHT);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::PRESENTATION) {
-                    // Presentation: Previous Slide (PAGE_UP)
+                    // Presentation: Previous Slide (Side Left Arrow)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Presentation -> Previous Slide (PAGE_UP)");
-                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_PAGE_UP);
+                        Serial.println("[ACTION] Presentation -> Previous Slide (Left Arrow)");
+                        s_bleMouse.sendKey(Connectivity::KeyCode::KEY_LEFT_ARROW);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Previous Reel (Touch swipe down for mobile apps + wheel + arrow key)
+                    // Reel Scroller: Previous Reel (Up Arrow Shortcut - instant, zero cursor displacement)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Swipe Down + Wheel + Up Arrow)");
-                        s_bleMouse.swipeDown(360);
-                        delay(40);
-                        s_bleMouse.scroll(3);
+                        Serial.println("[ACTION] Reel Scroller -> Previous Reel (Up Arrow)");
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_UP_ARROW);
                     }
                 }
@@ -391,12 +385,9 @@ void loop() {
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_F5);
                     }
                 } else if (s_stateManager.getOperatingMode() == Config::Settings::OperatingMode::REEL_SCROLLER) {
-                    // Reel Scroller: Double Tap to Like on Mobile + Space to Play/Pause on PC
+                    // Reel Scroller: Play / Pause (Space)
                     if (s_bleMouse.isConnected()) {
-                        Serial.println("[ACTION] Reel Scroller -> Like / Heart (Double Tap) + Play/Pause (Space)");
-                        s_bleMouse.click(Connectivity::MOUSE_LEFT);
-                        delay(60);
-                        s_bleMouse.click(Connectivity::MOUSE_LEFT);
+                        Serial.println("[ACTION] Reel Scroller -> Play/Pause Toggle (Space)");
                         s_bleMouse.sendKey(Connectivity::KeyCode::KEY_SPACE);
                     }
                 }

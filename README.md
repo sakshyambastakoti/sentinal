@@ -35,16 +35,16 @@ Sentinal features 3 distinct operational modes with instant, non-blocking hardwa
 
 ### Mode 2: Presentation Remote (2 LED Blinks)
 - Air mouse cursor movement is paused for steady hand delivery.
-- **Button A (Tap):** Next Slide (`PAGE_DOWN`).
-- **Button B (Tap):** Previous Slide (`PAGE_UP`).
+- **Button A (Tap):** Next Slide (Side **`RIGHT_ARROW`** key).
+- **Button B (Tap):** Previous Slide (Side **`LEFT_ARROW`** key).
 - **Button A (Hold $\ge 700\text{ ms}$):** Start / Toggle Fullscreen Presentation (`F5`).
 - **Button B (Hold $\ge 700\text{ ms}$):** Stationary Gyro Recalibration.
 
 ### Mode 3: Social Reel / Short Video Scroller (3 LED Blinks)
-- Optimized for mobile smartphones (iOS & Android) and web browsers.
-- **Button A (Tap):** Next Video (Touch drag swipe up + `DOWN_ARROW` + mouse scroll).
-- **Button B (Tap):** Previous Video (Touch drag swipe down + `UP_ARROW` + mouse scroll).
-- **Button A (Hold $\ge 700\text{ ms}$):** Like / Play-Pause (Double-tap left click + `SPACE`).
+- Pure keyboard shortcut navigation with **zero cursor movement or screen dragging**.
+- **Button A (Tap):** Next Video (**`DOWN_ARROW`**).
+- **Button B (Tap):** Previous Video (**`UP_ARROW`**).
+- **Button A (Hold $\ge 700\text{ ms}$):** Play / Pause Toggle (**`SPACE`**).
 - **Button B (Hold $\ge 700\text{ ms}$):** Stationary Gyro Recalibration.
 
 ---
